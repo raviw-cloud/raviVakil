@@ -1,0 +1,572 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>VakilDesk — Contract Review</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --navy:   #0D1B2A;
+      --navy2:  #162234;
+      --navy3:  #1e2e44;
+      --gold:   #C9A452;
+      --gold2:  #e0bb6a;
+      --light:  #E8E0D0;
+      --muted:  #9a9080;
+      --red:    #D32F2F;
+      --amber:  #F9A825;
+      --green:  #388E3C;
+      --white:  #ffffff;
+    }
+
+    body {
+      background: var(--navy);
+      color: var(--light);
+      font-family: Georgia, 'Times New Roman', serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 40px 20px 80px;
+    }
+
+    .top-bar {
+      width: 100%;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 24px;
+      margin-bottom: 12px;
+      border-bottom: 1px solid rgba(255,255,255,0.07);
+    }
+    .top-bar-brand {
+      font-size: 0.95rem;
+      font-weight: 800;
+      color: var(--white);
+      letter-spacing: 0.04em;
+      text-decoration: none;
+      font-family: 'Helvetica Neue', Arial, sans-serif;
+    }
+    .top-bar-right { display: flex; align-items: center; gap: 16px; }
+    .top-bar-email {
+      font-size: 0.78rem;
+      color: var(--muted);
+      font-family: 'Helvetica Neue', Arial, sans-serif;
+    }
+    .signout-btn {
+      font-size: 0.78rem;
+      font-weight: 600;
+      color: var(--muted);
+      background: none;
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 5px;
+      padding: 5px 12px;
+      cursor: pointer;
+      font-family: 'Helvetica Neue', Arial, sans-serif;
+      transition: color 0.15s, border-color 0.15s;
+    }
+    .signout-btn:hover { color: var(--white); border-color: rgba(255,255,255,0.3); }
+
+    header {
+      text-align: center;
+      margin-bottom: 48px;
+    }
+
+    header h1 {
+      font-size: 2rem;
+      color: var(--white);
+      letter-spacing: 0.04em;
+      font-weight: 700;
+    }
+
+    header h1 span { color: var(--gold); }
+
+    header p {
+      margin-top: 8px;
+      font-family: 'Helvetica Neue', Arial, sans-serif;
+      font-size: 0.85rem;
+      color: var(--muted);
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+
+    .card {
+      background: var(--navy2);
+      border: 1px solid rgba(201, 164, 82, 0.2);
+      border-radius: 10px;
+      padding: 32px;
+      width: 100%;
+      max-width: 680px;
+    }
+
+    /* Upload zone */
+    .upload-zone {
+      border: 2px dashed rgba(201, 164, 82, 0.35);
+      border-radius: 8px;
+      padding: 40px 20px;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color 0.2s, background 0.2s;
+      position: relative;
+    }
+
+    .upload-zone:hover, .upload-zone.drag-over {
+      border-color: var(--gold);
+      background: rgba(201, 164, 82, 0.05);
+    }
+
+    .upload-zone input[type="file"] {
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      cursor: pointer;
+      width: 100%;
+      height: 100%;
+    }
+
+    .upload-icon {
+      font-size: 2.5rem;
+      margin-bottom: 12px;
+      display: block;
+    }
+
+    .upload-zone p {
+      font-family: 'Helvetica Neue', Arial, sans-serif;
+      font-size: 0.9rem;
+      color: var(--muted);
+    }
+
+    .upload-zone .file-name {
+      margin-top: 10px;
+      font-size: 0.85rem;
+      color: var(--gold);
+      font-family: 'Helvetica Neue', Arial, sans-serif;
+      font-weight: 600;
+    }
+
+    /* Analyze button */
+    .btn-analyze {
+      display: block;
+      width: 100%;
+      margin-top: 24px;
+      padding: 14px;
+      background: var(--gold);
+      color: var(--navy);
+      border: none;
+      border-radius: 6px;
+      font-size: 1rem;
+      font-family: 'Helvetica Neue', Arial, sans-serif;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      cursor: pointer;
+      transition: background 0.2s, opacity 0.2s;
+    }
+
+    .btn-analyze:hover:not(:disabled) { background: var(--gold2); }
+    .btn-analyze:disabled { opacity: 0.45; cursor: not-allowed; }
+
+    /* Progress bar */
+    .progress-section {
+      display: none;
+      margin-top: 28px;
+    }
+
+    .progress-steps {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 10px;
+      font-family: 'Helvetica Neue', Arial, sans-serif;
+      font-size: 0.72rem;
+      color: var(--muted);
+      letter-spacing: 0.03em;
+    }
+
+    .progress-steps .step { flex: 1; text-align: center; transition: color 0.3s; }
+    .progress-steps .step.active { color: var(--gold); font-weight: 700; }
+    .progress-steps .step.done { color: var(--green); }
+
+    .progress-bar-track {
+      height: 4px;
+      background: var(--navy3);
+      border-radius: 2px;
+      overflow: hidden;
+    }
+
+    .progress-bar-fill {
+      height: 100%;
+      background: var(--gold);
+      border-radius: 2px;
+      width: 0%;
+      transition: width 0.6s ease;
+    }
+
+    /* Results */
+    .results-section {
+      display: none;
+      margin-top: 32px;
+    }
+
+    .score-row {
+      display: flex;
+      align-items: center;
+      gap: 24px;
+      margin-bottom: 24px;
+      flex-wrap: wrap;
+    }
+
+    .score-circle {
+      width: 90px;
+      height: 90px;
+      border-radius: 50%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      border: 4px solid var(--green);
+    }
+
+    .score-circle .score-num {
+      font-size: 1.8rem;
+      font-weight: 700;
+      color: var(--white);
+      line-height: 1;
+    }
+
+    .score-circle .score-grade {
+      font-size: 0.85rem;
+      color: var(--gold);
+      font-family: 'Helvetica Neue', Arial, sans-serif;
+    }
+
+    .score-info h2 {
+      font-size: 1.15rem;
+      color: var(--white);
+      margin-bottom: 4px;
+    }
+
+    .recommendation-badge {
+      display: inline-block;
+      padding: 4px 14px;
+      border-radius: 4px;
+      font-family: 'Helvetica Neue', Arial, sans-serif;
+      font-size: 0.78rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      color: var(--white);
+    }
+
+    .badge-SIGN     { background: var(--green); }
+    .badge-NEGOTIATE { background: var(--amber); color: var(--navy); }
+    .badge-ESCALATE { background: #E64A19; }
+    .badge-REJECT   { background: var(--red); }
+
+    .summary-box {
+      background: var(--navy3);
+      border-left: 3px solid var(--gold);
+      border-radius: 0 6px 6px 0;
+      padding: 16px 18px;
+      font-size: 0.9rem;
+      line-height: 1.65;
+      color: var(--light);
+    }
+
+    .divider {
+      height: 1px;
+      background: rgba(201, 164, 82, 0.15);
+      margin: 24px 0;
+    }
+
+    .cost-note {
+      font-family: 'Helvetica Neue', Arial, sans-serif;
+      font-size: 0.73rem;
+      color: var(--muted);
+      text-align: right;
+      margin-top: 8px;
+    }
+
+    /* Download button */
+    .btn-download {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      width: 100%;
+      padding: 14px;
+      background: transparent;
+      color: var(--gold);
+      border: 2px solid var(--gold);
+      border-radius: 6px;
+      font-size: 0.95rem;
+      font-family: 'Helvetica Neue', Arial, sans-serif;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      cursor: pointer;
+      transition: background 0.2s, color 0.2s;
+      margin-top: 20px;
+      text-decoration: none;
+    }
+
+    .btn-download:hover {
+      background: var(--gold);
+      color: var(--navy);
+    }
+
+    /* Error */
+    .error-box {
+      display: none;
+      margin-top: 20px;
+      background: rgba(211, 47, 47, 0.12);
+      border: 1px solid rgba(211, 47, 47, 0.4);
+      border-radius: 6px;
+      padding: 14px 18px;
+      font-family: 'Helvetica Neue', Arial, sans-serif;
+      font-size: 0.88rem;
+      color: #ff8a80;
+    }
+
+    footer {
+      margin-top: 60px;
+      text-align: center;
+      font-family: 'Helvetica Neue', Arial, sans-serif;
+      font-size: 0.72rem;
+      color: var(--muted);
+      max-width: 600px;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Session guard: redirect to login if not authenticated -->
+  <script>
+    if (sessionStorage.getItem('vd_auth') !== '1') {
+      window.location.replace('login.html');
+    }
+  </script>
+
+  <!-- Top bar -->
+  <div class="top-bar">
+    <a href="/" class="top-bar-brand">VakilDesk</a>
+    <div class="top-bar-right">
+      <span class="top-bar-email" id="topBarEmail"></span>
+      <button class="signout-btn" id="signOutBtn">Sign Out</button>
+    </div>
+  </div>
+
+  <header>
+    <h1>Contract <span>Analyzer</span></h1>
+    <p>AI-Powered Neutral Legal Review &nbsp;·&nbsp; Indian Contract Law</p>
+  </header>
+
+  <div class="card">
+
+    <!-- Upload -->
+    <div class="upload-zone" id="uploadZone">
+      <input type="file" id="pdfInput" accept="application/pdf" />
+      <span class="upload-icon">📄</span>
+      <p>Drag & drop a PDF contract, or <strong style="color:var(--gold)">click to browse</strong></p>
+      <p style="margin-top:6px;font-size:0.75rem;">PDF only · Max 10 MB</p>
+      <div class="file-name" id="fileName"></div>
+    </div>
+
+    <button class="btn-analyze" id="analyzeBtn" disabled>Analyze Contract</button>
+
+    <!-- Progress -->
+    <div class="progress-section" id="progressSection">
+      <div class="progress-steps" id="progressSteps">
+        <div class="step" data-step="0">Reading PDF</div>
+        <div class="step" data-step="1">Extracting Clauses</div>
+        <div class="step" data-step="2">Assessing Risk</div>
+        <div class="step" data-step="3">Checking Compliance</div>
+        <div class="step" data-step="4">Writing Report</div>
+      </div>
+      <div class="progress-bar-track">
+        <div class="progress-bar-fill" id="progressFill"></div>
+      </div>
+    </div>
+
+    <!-- Error -->
+    <div class="error-box" id="errorBox"></div>
+
+    <!-- Results -->
+    <div class="results-section" id="resultsSection">
+      <div class="score-row">
+        <div class="score-circle" id="scoreCircle">
+          <span class="score-num" id="scoreNum">—</span>
+          <span class="score-grade" id="scoreGrade">—</span>
+        </div>
+        <div class="score-info">
+          <h2>Contract Safety Score</h2>
+          <span class="recommendation-badge" id="recoBadge">—</span>
+        </div>
+      </div>
+
+      <div class="summary-box" id="summaryBox"></div>
+
+      <div class="divider"></div>
+      <div class="cost-note" id="costNote"></div>
+
+      <a class="btn-download" id="downloadBtn" href="#" target="_blank">
+        ⬇ &nbsp; Download Full Report (PDF)
+      </a>
+    </div>
+
+  </div>
+
+  <footer>
+    This tool performs neutral, AI-assisted analysis of contract documents under Indian law.
+    It does not constitute legal advice and is not a substitute for consultation with a qualified advocate.
+  </footer>
+
+  <script>
+    // ── Session: populate email, wire sign-out ───────────────────────────
+    const emailEl = document.getElementById('topBarEmail');
+    if (emailEl) emailEl.textContent = sessionStorage.getItem('vd_email') || '';
+
+    document.getElementById('signOutBtn').addEventListener('click', function () {
+      sessionStorage.removeItem('vd_auth');
+      sessionStorage.removeItem('vd_email');
+      window.location.replace('login.html');
+    });
+
+    const pdfInput    = document.getElementById('pdfInput');
+    const fileName    = document.getElementById('fileName');
+    const analyzeBtn  = document.getElementById('analyzeBtn');
+    const uploadZone  = document.getElementById('uploadZone');
+    const progressSec = document.getElementById('progressSection');
+    const progressFill= document.getElementById('progressFill');
+    const progressSteps = document.querySelectorAll('.progress-steps .step');
+    const errorBox    = document.getElementById('errorBox');
+    const resultsSec  = document.getElementById('resultsSection');
+    const scoreNum    = document.getElementById('scoreNum');
+    const scoreGrade  = document.getElementById('scoreGrade');
+    const scoreCircle = document.getElementById('scoreCircle');
+    const recoBadge   = document.getElementById('recoBadge');
+    const summaryBox  = document.getElementById('summaryBox');
+    const costNote    = document.getElementById('costNote');
+    const downloadBtn = document.getElementById('downloadBtn');
+
+    let selectedFile = null;
+
+    pdfInput.addEventListener('change', () => {
+      if (pdfInput.files[0]) handleFileSelect(pdfInput.files[0]);
+    });
+
+    uploadZone.addEventListener('dragover', e => { e.preventDefault(); uploadZone.classList.add('drag-over'); });
+    uploadZone.addEventListener('dragleave', () => uploadZone.classList.remove('drag-over'));
+    uploadZone.addEventListener('drop', e => {
+      e.preventDefault();
+      uploadZone.classList.remove('drag-over');
+      const f = e.dataTransfer.files[0];
+      if (f && f.type === 'application/pdf') handleFileSelect(f);
+      else showError('Only PDF files are accepted.');
+    });
+
+    function handleFileSelect(file) {
+      if (file.size > 10 * 1024 * 1024) { showError('File exceeds 10 MB limit.'); return; }
+      selectedFile = file;
+      fileName.textContent = '📎 ' + file.name;
+      analyzeBtn.disabled = false;
+      hideError();
+      resultsSec.style.display = 'none';
+    }
+
+    analyzeBtn.addEventListener('click', async () => {
+      if (!selectedFile) return;
+
+      hideError();
+      resultsSec.style.display = 'none';
+      analyzeBtn.disabled = true;
+      progressSec.style.display = 'block';
+
+      let stepIndex = 0;
+      const stepPercents = [10, 30, 55, 75, 90];
+
+      function advanceStep(i) {
+        progressSteps.forEach((s, idx) => {
+          s.classList.remove('active', 'done');
+          if (idx < i) s.classList.add('done');
+          else if (idx === i) s.classList.add('active');
+        });
+        progressFill.style.width = stepPercents[i] + '%';
+      }
+
+      advanceStep(0);
+
+      // Simulate intermediate steps while waiting for API
+      const stepTimer = setInterval(() => {
+        stepIndex = Math.min(stepIndex + 1, 3);
+        advanceStep(stepIndex);
+      }, 3500);
+
+      try {
+        const formData = new FormData();
+        formData.append('pdf', selectedFile);
+
+        const res = await fetch('/api/analyze', { method: 'POST', body: formData });
+        const data = await res.json();
+
+        clearInterval(stepTimer);
+
+        if (!res.ok) { showError(data.error || 'Analysis failed.'); resetProgress(); return; }
+
+        // Complete progress
+        progressSteps.forEach(s => s.classList.add('done'));
+        progressFill.style.width = '100%';
+
+        setTimeout(() => {
+          progressSec.style.display = 'none';
+          showResults(data);
+        }, 600);
+
+      } catch (err) {
+        clearInterval(stepTimer);
+        showError('Network error. Please check your connection and try again.');
+        resetProgress();
+      }
+    });
+
+    function showResults(data) {
+      const score = data.score;
+      scoreNum.textContent = score;
+      scoreGrade.textContent = data.grade;
+
+      const scoreColor = score >= 70 ? '#388E3C' : score >= 50 ? '#F9A825' : '#D32F2F';
+      scoreCircle.style.borderColor = scoreColor;
+
+      recoBadge.textContent = data.recommendation;
+      recoBadge.className = 'recommendation-badge badge-' + data.recommendation;
+
+      summaryBox.textContent = data.summary;
+
+      if (data.cost) {
+        costNote.textContent = `Estimated analysis cost: $${data.cost}`;
+      }
+
+      downloadBtn.href = '/api/download/' + data.sessionId;
+
+      resultsSec.style.display = 'block';
+      analyzeBtn.disabled = false;
+      resultsSec.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+
+    function showError(msg) {
+      errorBox.textContent = '⚠ ' + msg;
+      errorBox.style.display = 'block';
+      analyzeBtn.disabled = !selectedFile;
+    }
+
+    function hideError() { errorBox.style.display = 'none'; }
+
+    function resetProgress() {
+      progressSec.style.display = 'none';
+      progressFill.style.width = '0%';
+      progressSteps.forEach(s => s.classList.remove('active', 'done'));
+      analyzeBtn.disabled = !selectedFile;
+    }
+  </script>
+
+</body>
+</html>

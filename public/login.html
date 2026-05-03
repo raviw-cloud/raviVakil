@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sign In — VakilDesk</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
+  <style>
+    body { font-family: 'Inter', system-ui, sans-serif; }
+  </style>
+</head>
+<body class="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-blue-100 flex flex-col">
+
+  <!-- Nav -->
+  <nav class="bg-white border-b border-gray-200 h-14 flex items-center px-6">
+    <a href="/" class="flex items-center gap-2 font-extrabold text-gray-900 text-base no-underline">
+      VakilDesk
+    </a>
+  </nav>
+
+  <!-- Login Card -->
+  <div class="flex-1 flex items-center justify-center px-4 py-12">
+    <div class="bg-white rounded-2xl shadow-xl border border-gray-100 w-full max-w-md p-10">
+
+      <div class="text-center mb-8">
+        <div class="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-blue-600 mb-4">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+            <polyline points="14 2 14 8 20 8"/>
+            <line x1="16" y1="13" x2="8" y2="13"/>
+            <line x1="16" y1="17" x2="8" y2="17"/>
+            <polyline points="10 9 9 9 8 9"/>
+          </svg>
+        </div>
+        <h1 class="text-2xl font-extrabold text-gray-900 tracking-tight">Welcome back</h1>
+        <p class="text-sm text-gray-500 mt-1">Sign in to your VakilDesk account</p>
+      </div>
+
+      <form id="loginForm" novalidate>
+        <!-- Error banner -->
+        <div id="errorBanner" class="hidden mb-5 bg-red-50 border border-red-200 rounded-lg px-4 py-3 text-sm text-red-700 font-medium"></div>
+
+        <div class="mb-4">
+          <label for="email" class="block text-sm font-600 text-gray-700 mb-1.5">Email address</label>
+          <input
+            type="email" id="email" name="email" autocomplete="email"
+            placeholder="you@example.com"
+            class="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm text-gray-900 placeholder-gray-400
+                   focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+          />
+        </div>
+
+        <div class="mb-6">
+          <div class="flex justify-between items-center mb-1.5">
+            <label for="password" class="block text-sm font-600 text-gray-700">Password</label>
+            <a href="#" class="text-xs text-blue-600 hover:text-blue-700 font-medium">Forgot password?</a>
+          </div>
+          <div class="relative">
+            <input
+              type="password" id="password" name="password" autocomplete="current-password"
+              placeholder="••••••••"
+              class="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm text-gray-900 placeholder-gray-400
+                     focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition pr-10"
+            />
+            <button type="button" id="togglePwd" class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 focus:outline-none" aria-label="Show password">
+              <svg id="eyeIcon" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                <circle cx="12" cy="12" r="3"/>
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        <button
+          type="submit" id="submitBtn"
+          class="w-full bg-blue-600 hover:bg-blue-700 active:scale-[0.98] text-white font-bold text-sm py-3 rounded-lg transition-all duration-150"
+        >
+          Sign In
+        </button>
+      </form>
+
+      <p class="text-center text-xs text-gray-400 mt-6">
+        Don't have an account?
+        <a href="/" class="text-blue-600 font-medium hover:underline">Start free trial</a>
+      </p>
+    </div>
+  </div>
+
+  <!-- Footer note -->
+  <p class="text-center text-xs text-gray-400 pb-6">
+    ⚠️ AI-generated analysis does not constitute legal advice.
+  </p>
+
+<script>
+  // ── Auth guard: redirect to dashboard if already logged in ──────────────
+  if (sessionStorage.getItem('vd_auth') === '1') {
+    window.location.replace('dashboard.html');
+  }
+
+  // ── Password visibility toggle ──────────────────────────────────────────
+  document.getElementById('togglePwd').addEventListener('click', function () {
+    const pwd = document.getElementById('password');
+    pwd.type = pwd.type === 'password' ? 'text' : 'password';
+  });
+
+  // ── Login form ──────────────────────────────────────────────────────────
+  document.getElementById('loginForm').addEventListener('submit', function (e) {
+    e.preventDefault();
+
+    const email    = document.getElementById('email').value.trim();
+    const password = document.getElementById('password').value;
+    const banner   = document.getElementById('errorBanner');
+    const btn      = document.getElementById('submitBtn');
+
+    banner.classList.add('hidden');
+    banner.textContent = '';
+
+    // Basic field validation
+    if (!email || !password) {
+      banner.textContent = 'Please enter your email and password.';
+      banner.classList.remove('hidden');
+      return;
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      banner.textContent = 'Please enter a valid email address.';
+      banner.classList.remove('hidden');
+      return;
+    }
+
+    // Loading state
+    btn.disabled = true;
+    btn.textContent = 'Signing in…';
+
+    // ── Placeholder auth — replace this block with a real API call ──────
+    // e.g. fetch('/api/auth/login', { method:'POST', body: JSON.stringify({email,password}) })
+    setTimeout(function () {
+      sessionStorage.setItem('vd_auth', '1');
+      sessionStorage.setItem('vd_email', email);
+      window.location.replace('dashboard.html');
+    }, 800);
+    // ────────────────────────────────────────────────────────────────────
+  });
+</script>
+</body>
+</html>
