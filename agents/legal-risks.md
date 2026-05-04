@@ -79,12 +79,18 @@ Every clause must be evaluated against these 10 risk dimensions. A single clause
 - Renewal locks in new terms by reference to "then-current" policies
 
 ### 10. Non-Compete Overreach (NC)
-- Duration exceeds 12 months (18+ months is aggressive in most states)
-- Geographic scope is nationwide or global without business justification
-- Activity restriction covers entire industry rather than specific competing products
-- Applies after termination without cause or layoff
-- No consideration provided in exchange for the covenant
-- Covers independent contractors (increasingly unenforceable)
+
+**Indian law — S.27 Indian Contract Act 1872 (ICA):**
+Under S.27 ICA, any post-employment non-compete is void regardless of duration,
+geography, or reasonableness. There is no blue-pencilling or reasonableness
+exception under Indian law (unlike English or US law).
+
+Flag ALL of the following as void or high-risk:
+- Post-termination non-compete of any duration — automatically void under S.27 ICA
+- Post-termination non-solicitation of clients — consistently held void by Indian High Courts
+- Geographic or time-bound framing does not save the clause
+- Exception: restrictions operative only DURING active employment are permissible
+- Exception: sale of goodwill with local/reasonable limits — valid under S.27 proviso
 
 ## Risk Scoring Framework
 
@@ -119,11 +125,11 @@ For each clause, calculate the risk score using these four factors:
 
 **C. Estimated Financial Exposure (20% of score)**
 - What is the estimated dollar amount at risk?
-- 1-2: Under $10,000
-- 3-4: $10,000 - $50,000
-- 5-6: $50,000 - $250,000
-- 7-8: $250,000 - $1,000,000
-- 9-10: Over $1,000,000 or uncapped
+- 1-2: Under ₹1 lakh
+- 3-4: ₹1 lakh – ₹5 lakh
+- 5-6: ₹5 lakh – ₹25 lakh
+- 7-8: ₹25 lakh – ₹1 crore
+- 9-10: Over ₹1 crore or uncapped
 
 **D. Asymmetry (15% of score)**
 - Does this clause disproportionately benefit one party?
@@ -213,7 +219,7 @@ Poison Pills Detected: [n]
 | # | Section | Clause Summary | Risk Categories | Severity (1-10) | Likelihood (1-10) | Financial Exposure | Asymmetry (1-10) | Composite Score | Benefits |
 |---|---|---|---|---|---|---|---|---|---|
 | 1 | 6.2 | Broad indemnification for all third-party claims | BI, UL, OS | 9 | 6 | Uncapped | 9 | 8 | Party A |
-| 2 | 7.1 | 2-year nationwide non-compete | NC, RC | 8 | 7 | $200K-$500K est. | 8 | 8 | Party A |
+| 2 | 7.1 | 2-year nationwide non-compete | NC, RC | 8 | 7 | ₹15L–₹40L est. | 8 | 8 | Party A |
 | 3 | 8.1 | Liability cap excludes indemnification | UL, FE | 8 | 5 | Uncapped | 7 | 7 | Party A |
 
 ### Top Risks (Detailed Analysis)
@@ -240,7 +246,7 @@ Why It Is Dangerous:
 - Survives termination per Section 14.2 with no time limit
 
 Financial Exposure:
-- Single lawsuit defense costs: $50,000 - $500,000+
+- Single lawsuit defence costs: ₹5 lakh – ₹50 lakh+
 - Settlement or judgment: potentially unlimited
 - Total exposure: UNCAPPED
 
