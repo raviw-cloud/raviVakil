@@ -83,7 +83,7 @@ For each P0-P2 recommendation, write specific replacement language. Guidelines:
 "In no event shall either party's total aggregate liability under this
 Agreement exceed [the greater of (a) the total fees paid or payable under
 this Agreement during the twelve (12) month period preceding the claim, or
-(b) $[amount]]. This limitation shall apply regardless of the form of action,
+(b) ₹[amount]]. This limitation shall apply regardless of the form of action,
 whether in contract, tort, strict liability, or otherwise."
 ```
 
@@ -119,17 +119,18 @@ the effective date of termination, and (b) any non-cancellable expenses
 incurred by Contractor prior to receipt of the termination notice."
 ```
 
-*Data Protection*:
+*Data Protection (DPDP Act 2023)*:
 ```
-"Processor shall (a) process Personal Data only on documented instructions
-from Controller, (b) ensure personnel are bound by confidentiality obligations,
-(c) implement appropriate technical and organizational security measures,
-(d) not engage sub-processors without Controller's prior written consent,
-(e) assist Controller in responding to data subject requests within [5]
-business days, (f) notify Controller of any Personal Data breach within
-[48/72] hours of becoming aware, (g) delete or return all Personal Data upon
-termination within [30] days, and (h) make available information necessary to
-demonstrate compliance and allow for audits."
+"Data Fiduciary shall: (a) process Personal Data only for the specific purpose
+for which consent was obtained under DPDP Act 2023 S.7; (b) implement reasonable
+security safeguards to prevent Personal Data breach; (c) notify the Data
+Protection Board and affected Data Principals of any breach without undue delay
+and within 72 hours of becoming aware; (d) erase Personal Data upon withdrawal
+of consent or upon the purpose being served, unless retention is required by
+applicable law; (e) not transfer Personal Data outside India except to countries
+notified by the Central Government under DPDP Act S.16; (f) honour Data
+Principal rights: access (S.11), correction and erasure (S.12), grievance
+redressal (S.13), and nomination (S.14). These obligations survive termination."
 ```
 
 ### Step 4: Build Negotiation Scripts

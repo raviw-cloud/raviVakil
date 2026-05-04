@@ -17,8 +17,8 @@ Extract every obligation, deadline, trigger, condition, and penalty from the con
 | **Notice** | NOTC | Required communications or notifications | 90-day termination notice; Breach notification within 72 hours |
 | **Approval** | APPR | Required consent or sign-off actions | Client approval of deliverables within 10 business days |
 | **Reporting** | RPT | Required submission of information or documentation | Quarterly compliance reports; Annual audit results |
-| **Insurance** | INS | Required maintenance of insurance coverage | Maintain $2M general liability; Provide certificate annually |
-| **Compliance** | COMP | Required adherence to laws, regulations, or standards | GDPR compliance; SOC 2 certification maintenance |
+| **Insurance** | INS | Required maintenance of insurance coverage | Maintain ₹2Cr general liability; Provide certificate annually |
+| **Compliance** | COMP | Required adherence to laws, regulations, or standards | DPDP Act 2023 / IT Act SPDI Rules 2011 compliance; ISO 27001 certification maintenance |
 | **Restrictive** | REST | Required abstention from specific activities | Non-compete; Non-solicitation; Exclusivity |
 | **Conditional** | COND | Obligations triggered only if a specific event occurs | Indemnification upon third-party claim; Force majeure notice |
 | **Survival** | SURV | Obligations that continue after contract termination | Confidentiality for 3 years post-termination; Data return within 30 days |
@@ -110,30 +110,30 @@ Calculate the total financial exposure by category:
 
 ```
 A. Guaranteed Payments (must pay regardless):
-   - Base contract value: $___
-   - Minimum commitments: $___
-   - Required insurance premiums: $___
-   Subtotal A: $___
+   - Base contract value: ₹___
+   - Minimum commitments: ₹___
+   - Required insurance premiums: ₹___
+   Subtotal A: ₹___
 
 B. Contingent Payments (may owe if triggered):
-   - Early termination fees: $___
-   - Liquidated damages (maximum): $___
-   - Late payment interest (estimated): $___
-   - Penalty clauses: $___
-   Subtotal B: $___
+   - Early termination fees: ₹___
+   - Liquidated damages (maximum): ₹___
+   - Late payment interest (estimated): ₹___
+   - Penalty clauses: ₹___
+   Subtotal B: ₹___
 
 C. Indemnification Exposure (uncapped unless specified):
-   - Indemnification cap (if any): $___
+   - Indemnification cap (if any): ₹___
    - If uncapped: "UNLIMITED"
-   Subtotal C: $___
+   Subtotal C: ₹___
 
 D. Consequential Exposure:
-   - Lost profits claims (if not excluded): $___
-   - Business interruption (if not excluded): $___
-   Subtotal D: $___
+   - Lost profits claims (if not excluded): ₹___
+   - Business interruption (if not excluded): ₹___
+   Subtotal D: ₹___
 
-TOTAL MAXIMUM EXPOSURE: A + B + C + D = $___
-TOTAL GUARANTEED EXPOSURE: A = $___
+TOTAL MAXIMUM EXPOSURE: A + B + C + D = ₹___
+TOTAL GUARANTEED EXPOSURE: A = ₹___
 ```
 
 ## Output Format
@@ -153,11 +153,11 @@ Governing Law: [jurisdiction]
 
 | # | Section | Obligated Party | Type | Obligation Description | Trigger | Deadline | Cure Period | Consequence of Breach |
 |---|---|---|---|---|---|---|---|---|
-| 1 | 2.1 | Contractor | PERF | Deliver Phase 1 software build | Effective Date | 60 calendar days | 15 business days | Termination right + liquidated damages of $500/day |
-| 2 | 3.1 | Company | PAY | Pay monthly service fee of $5,000 | Invoice receipt | Net 30 calendar days | 10 business days after written notice | 1.5%/month interest; acceleration after 60 days past due |
+| 1 | 2.1 | Contractor | PERF | Deliver Phase 1 software build | Effective Date | 60 calendar days | 15 business days | Termination right + liquidated damages of ₹50,000/day |
+| 2 | 3.1 | Company | PAY | Pay monthly service fee of ₹5,00,000 | Invoice receipt | Net 30 calendar days | 10 business days after written notice | 1.5%/month interest; acceleration after 60 days past due |
 | 3 | 5.2 | Contractor | NOTC | Provide termination notice | Decision to terminate | 90 calendar days before renewal date | N/A | Auto-renewal for additional 12 months |
-| 4 | 6.1 | Both | COMP | Maintain GDPR compliance | Continuous | Ongoing | 30 days to cure | Termination for cause |
-| 5 | 7.1 | Contractor | REST | Non-compete restriction | Termination | 24 months post-termination | N/A | Injunctive relief + liquidated damages of $50,000 |
+| 4 | 6.1 | Both | COMP | Maintain DPDP Act 2023 / IT Act SPDI Rules 2011 compliance | Continuous | Ongoing | 30 days to cure | Termination for cause |
+| 5 | 7.1 | Contractor | REST | Non-compete restriction (operative during term only — S.27 ICA voids post-termination) | Termination | During active term only | N/A | Injunctive relief + liquidated damages of ₹5,00,000 |
 
 ### Critical Deadlines Calendar
 
@@ -211,24 +211,24 @@ HIDDEN TRAPS IDENTIFIED:
 
 ```
 GUARANTEED FINANCIAL OBLIGATIONS:
-  Base Contract Value (full term): $[amount]
-  Minimum Commitments: $[amount]
-  Insurance Requirements: $[amount]/year
-  Total Guaranteed: $[amount]
+  Base Contract Value (full term): ₹[amount]
+  Minimum Commitments: ₹[amount]
+  Insurance Requirements: ₹[amount]/year
+  Total Guaranteed: ₹[amount]
 
 CONTINGENT FINANCIAL EXPOSURE:
-  Early Termination Penalty: $[amount]
-  Maximum Liquidated Damages: $[amount]
-  Late Payment Interest (estimated annual): $[amount]
-  Other Penalties: $[amount]
-  Total Contingent: $[amount]
+  Early Termination Penalty: ₹[amount]
+  Maximum Liquidated Damages: ₹[amount]
+  Late Payment Interest (estimated annual): ₹[amount]
+  Other Penalties: ₹[amount]
+  Total Contingent: ₹[amount]
 
 UNCAPPED EXPOSURE:
-  Indemnification: [Capped at $X / UNCAPPED]
+  Indemnification: [Capped at ₹X / UNCAPPED]
   Consequential Damages: [Excluded / NOT excluded]
   Total Uncapped Risk: [description]
 
-TOTAL MAXIMUM FINANCIAL EXPOSURE: $[amount] + [uncapped items]
+TOTAL MAXIMUM FINANCIAL EXPOSURE: ₹[amount] + [uncapped items]
 ```
 
 ### Obligation Balance Scorecard
@@ -255,8 +255,8 @@ Total Obligations Identified: [n]
   - Mutual Obligations: [n]
 Critical Deadlines (next 90 days): [n]
 Auto-Renewal Traps Found: [n]
-Total Guaranteed Financial Exposure: $[amount]
-Total Maximum Financial Exposure: $[amount]
+Total Guaranteed Financial Exposure: ₹[amount]
+Total Maximum Financial Exposure: ₹[amount]
 Obligations with No Stated Consequence: [n] (flag for review)
 ```
 
