@@ -70,7 +70,7 @@ Two parallel workstreams:
 ```
 
 **Left column:**
-- Prose: first 200 chars of `summaryText` — truncate at word boundary, append `…`
+- Prose: first 200 chars of `summaryText` truncated at word boundary — algorithm: `summaryText.slice(0, 200).replace(/\s+\S*$/, '') + '…'`
 - Risk pills: unchanged (3 colored rounded rects)
 - Inline risks: top 2 HIGH risks with red left bar (reduced from 3 to fit column)
 
@@ -98,16 +98,14 @@ Two parallel workstreams:
 - Each tile: `(W - 10) / 3` wide, 52pt tall, 4pt rounded corners, 5pt gap between tiles
 - No exposure estimate tile
 
-**Table changes (existing `drawTable`):**
-- Row background: alternating ALTROW/WHITE replaced with severity-tinted rows:
-  - HIGH rows: `#FEF2F2` (light red)
-  - MEDIUM rows: `#FFFBEB` (light amber)
-  - LOW rows: `#F0FDF4` (light green)
-  - Unknown severity: existing ALTROW
-- Left severity stripe: 4pt wide colored rect drawn before each row (RED/AMBER/GREEN)
-- Cell text truncation: all text columns hard-truncated to 80 chars with `…` before passing to `drawTable`
-- Severity column: badge removed — severity now conveyed by row color + left stripe only, saving column width
-- New "Action" column replaces verbose "Notes" column — sourced from recommendations agent, truncated to 40 chars
+**New `drawRiskTable(rows)` function** (separate from the generic `drawTable`; all other tables — metadata, clauses, obligations — continue to use `drawTable` unchanged):
+- Headers: `['Risk', 'Clause', 'Action']` with column widths `[255, 60, W-315]`
+- Row background tinted by severity field on each row object:
+  - `'HIGH'` → `#FEF2F2`, `'MEDIUM'` → `#FFFBEB`, `'LOW'` → `#F0FDF4`, unknown → ALTROW
+- Left severity stripe: 4pt wide colored rect (RED/AMBER/GREEN) drawn flush to left edge of each row before cell text
+- Severity badge column removed — severity conveyed by row color + left stripe
+- "Action" column: use `r.explanation` truncated to 40 chars. If `r.explanation` is empty, fall back to `r.risk` truncated to 40 chars.
+- "Risk" cell text: truncated to 80 chars using `str.length > 80 ? str.slice(0, 77) + '…' : str`
 
 ---
 
@@ -246,7 +244,7 @@ Sections 1–12 are already fully Indian-law aligned. Section 13 is additive onl
 ### PDF drawing (server.js)
 
 - Gauge arc: use PDFKit `doc.path()` with SVG arc commands converted to PDFKit equivalents. Draw track first (LIGHTBG), then filled arc (score color). Place score number **below** the arc center, not inside it, to avoid overlap.
-- Pie chart: compute start/end angles for each severity segment. Use `doc.arc(cx, cy, r, startAngle, endAngle).fill(color)`. Draw segments sequentially; add a small 2pt white gap between segments using `doc.arc` with slightly reduced sweep.
+- Pie chart: compute start/end angles for each severity segment proportional to count. Use `doc.arc(cx, cy, r, startAngle, endAngle).fill(color)`. Draw segments sequentially. Gap between segments: subtract 3 degrees from each segment's end angle (i.e., draw to `endAngle - (3 * Math.PI / 180)`), leaving a white sliver that acts as a visual separator. If any count is zero, skip that segment entirely rather than drawing a zero-width arc.
 - Two-column layout (Executive Summary): use absolute `x` positioning with PDFKit's `text(str, x, y, opts)`. Left column starts at x=50, right column starts at x=50 + leftWidth + gap.
 - Severity-tinted rows: pass severity data alongside row data into `drawTable`; draw colored background rect before text, then 4pt left stripe.
 - Cell truncation: apply before calling `drawTable` — `str.length > 80 ? str.slice(0, 77) + '…' : str`.
