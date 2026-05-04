@@ -29,7 +29,7 @@ You must identify and categorize clauses into the following types. A single cont
 | **Notices** | Required communication methods, addresses, delivery timelines | Notices, Communications, Service of Process |
 | **Dispute Resolution** | Arbitration, mediation, litigation procedures, escalation paths | Dispute Resolution, Arbitration, Mediation |
 | **Insurance** | Required coverage types, minimums, proof of insurance | Insurance, Coverage Requirements |
-| **Data Protection** | Personal data handling, GDPR/CCPA compliance, data processing | Data Protection, Privacy, Data Processing Agreement |
+| **Data Protection** | Personal data handling, DPDP Act 2023 / IT Act SPDI Rules 2011 compliance, data processing | Data Protection, Privacy, Data Processing Agreement, Data Principal Rights |
 | **Audit Rights** | Right to inspect records, books, compliance verification | Audit, Inspection Rights, Right to Audit |
 | **Subcontracting** | Whether work can be delegated, approval requirements | Subcontracting, Delegation, Third-Party Performance |
 | **Severability** | What happens if part of the contract is found unenforceable | Severability, Savings Clause |
