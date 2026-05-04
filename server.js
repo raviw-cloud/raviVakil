@@ -366,7 +366,7 @@ app.get('/api/download/:sessionId', function(req, res) {
     return a;
   }, { h: 0, m: 0, l: 0 });
 
-  const SLATE = '#1E293B', BLUE = '#B45309', WHITE = '#FFFFFF', LIGHTBG = '#F3F4F6';
+  const NAVY = '#1a2744', GOLD = '#c9a84c', WHITE = '#FFFFFF', LIGHTBG = '#F3F4F6';
   const RED = '#DC2626', AMBER = '#D97706', GREEN = '#16A34A', GREY = '#6B7280';
   const ALTROW = '#F8FAFC';
   const W = 495, CTOP = 88, CBOT = 760;
@@ -381,8 +381,8 @@ app.get('/api/download/:sessionId', function(req, res) {
     if (cover) return;
     pageNum++;
     // Page header bar
-    doc.rect(0, 0, 595, 48).fill(SLATE);
-    doc.rect(0, 48, 595, 3).fill(BLUE);
+    doc.rect(0, 0, 595, 48).fill(NAVY);
+    doc.rect(0, 48, 595, 3).fill(GOLD);
     doc.fontSize(9).fillColor(WHITE).font('Helvetica')
       .text('CONTRACT REVIEW REPORT', 50, 18, { width: 300, align: 'left', lineBreak: false })
       .text('AI Legal Assistant', 295, 18, { width: 250, align: 'right', lineBreak: false });
@@ -398,17 +398,15 @@ app.get('/api/download/:sessionId', function(req, res) {
   // Section header
   function secHdr(title) {
     doc.addPage();
-    // Left accent bar + title
-    doc.rect(50, 60, 4, 26).fill(BLUE);
-    doc.fontSize(18).fillColor(SLATE).font('Helvetica-Bold').text(title, 62, 60, { width: W - 12 });
-    // Bottom rule under heading
-    doc.moveTo(50, 88).lineTo(545, 88).lineWidth(0.5).strokeColor(BLUE).stroke();
-    doc.y = CTOP;
+    doc.rect(50, 60, 4, 26).fill(GOLD);
+    doc.fontSize(18).fillColor(NAVY).font('Helvetica-Bold').text(title, 62, 60, { width: W - 12 });
+    doc.moveTo(50, 90).lineTo(545, 90).lineWidth(0.5).strokeColor(GOLD).stroke();
+    doc.y = 98;
   }
 
   // Callout block for NOTE / WARNING / TIP
   function drawCallout(type, text) {
-    var map = { WARNING: [RED, '#FEF2F2'], NOTE: [BLUE, '#FFFBEB'], TIP: [GREEN, '#F0FDF4'] };
+    var map = { WARNING: [RED, '#FEF2F2'], NOTE: [GOLD, '#FFFBEB'], TIP: [GREEN, '#F0FDF4'] };
     var pair = map[type] || [GREY, LIGHTBG];
     var border = pair[0], bg = pair[1];
     var startY = doc.y;
@@ -418,7 +416,7 @@ app.get('/api/download/:sessionId', function(req, res) {
     doc.rect(50, startY, 4, h).fill(border);
     doc.fontSize(8).fillColor(border).font('Helvetica-Bold')
       .text(type, 62, startY + 7, { width: 60, lineBreak: false });
-    doc.fontSize(9).fillColor(SLATE).font('Helvetica')
+    doc.fontSize(9).fillColor(NAVY).font('Helvetica')
       .text(text, 62, startY + 18, { width: W - 24 });
     doc.y = startY + h + 8;
   }
@@ -428,7 +426,7 @@ app.get('/api/download/:sessionId', function(req, res) {
     var RH = 22, FS = 8, LH = 10, PAD = 6;
     var y = doc.y;
     function hdr(atY) {
-      doc.rect(50, atY, W, RH).fill(SLATE);
+      doc.rect(50, atY, W, RH).fill(NAVY);
       var x = 50;
       for (var hi = 0; hi < headers.length; hi++) {
         doc.fontSize(FS).fillColor(WHITE).font('Helvetica-Bold')
@@ -457,7 +455,7 @@ app.get('/api/download/:sessionId', function(req, res) {
       for (var ci2 = 0; ci2 < row.length; ci2++) {
         var s     = String(row[ci2] || '--');
         var u     = s.toUpperCase();
-        var color = u === 'HIGH' ? RED : u === 'MEDIUM' ? AMBER : u === 'LOW' ? GREEN : SLATE;
+        var color = u === 'HIGH' ? RED : u === 'MEDIUM' ? AMBER : u === 'LOW' ? GREEN : NAVY;
         doc.fontSize(FS).fillColor(color).font('Helvetica')
           .text(s, x2 + 4, y + PAD, { width: cols[ci2] - 8, lineBreak: true, height: cellH - PAD, ellipsis: true });
         x2 += cols[ci2];
@@ -472,12 +470,12 @@ app.get('/api/download/:sessionId', function(req, res) {
     var TINTS   = { HIGH: '#FEF2F2', MEDIUM: '#FFFBEB', LOW: '#F0FDF4' };
     var STRIPES = { HIGH: RED, MEDIUM: AMBER, LOW: GREEN };
     var headers = ['Risk', 'Clause', 'Action'];
-    var cols    = [255, 60, W - 315];
+    var cols    = [220, 58, W - 278];
     var RH = 22, FS = 8, PAD = 5;
     var y = doc.y;
 
     function riskHdr(atY) {
-      doc.rect(50, atY, W, RH).fill(SLATE);
+      doc.rect(50, atY, W, RH).fill(NAVY);
       var x = 50;
       headers.forEach(function(h, i) {
         doc.fontSize(FS).fillColor(WHITE).font('Helvetica-Bold')
@@ -497,7 +495,7 @@ app.get('/api/download/:sessionId', function(req, res) {
       var cells  = [
         risk.length   > 80 ? risk.slice(0, 77)   + '…' : risk,
         r.clauseRef || '--',
-        action.length > 40 ? action.slice(0, 37) + '…' : action
+        action.length > 80 ? action.slice(0, 77) + '…' : action
       ];
 
       var lineCount = Math.max(1, Math.ceil(cells[0].length / 36));
@@ -515,7 +513,7 @@ app.get('/api/download/:sessionId', function(req, res) {
 
       var x = 50;
       cells.forEach(function(cell, ci) {
-        doc.fontSize(FS).fillColor(SLATE).font('Helvetica')
+        doc.fontSize(FS).fillColor(NAVY).font('Helvetica')
           .text(cell, x + (ci === 0 ? 8 : PAD), y + PAD, {
             width:     cols[ci] - (ci === 0 ? 12 : PAD * 2),
             lineBreak: true,
@@ -529,207 +527,328 @@ app.get('/api/download/:sessionId', function(req, res) {
     doc.y = y + 8;
   }
 
-  // ── Cover ──────────────────────────────────────────────────────────────────
+  // ── Cover — Dashboard ──────────────────────────────────────────────────────
   doc.addPage();
-  var sc = score >= 70 ? GREEN : score >= 50 ? AMBER : RED;
-  var recC = recommendation === 'SIGN' ? GREEN : recommendation === 'NEGOTIATE' ? AMBER : RED;
+  var sc     = score >= 70 ? GREEN : score >= 50 ? AMBER : RED;
+  var ORANGE = '#EA580C';
+  var recC   = recommendation === 'SIGN'      ? GREEN
+             : recommendation === 'NEGOTIATE' ? AMBER
+             : recommendation === 'ESCALATE'  ? ORANGE : RED;
+  var gLabel = score >= 90 ? 'Excellent' : score >= 80 ? 'Good' : score >= 70 ? 'Satisfactory'
+             : score >= 60 ? 'Fair' : score >= 50 ? 'Below Average' : score >= 35 ? 'Poor' : 'Critical Risk';
 
-  // Top band: 0–185 (text stays well below y=185, safe from auto-page)
-  doc.rect(0, 0, 595, 185).fill(SLATE);
-  doc.rect(0, 185, 595, 4).fill(BLUE);
-  doc.fontSize(26).fillColor(WHITE).font('Helvetica-Bold')
-    .text('CONTRACT REVIEW REPORT', 50, 62, { width: W, align: 'center' });
-  doc.fontSize(12).fillColor(LIGHTBG).font('Helvetica')
-    .text('AI-Powered Neutral Legal Analysis', 50, 102, { width: W, align: 'center' });
-  doc.fontSize(9).fillColor(LIGHTBG).font('Helvetica')
-    .text(new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' }), 50, 128, { width: W, align: 'center' });
+  // ── NAVY top band ───────────────────────────────────────────────────────────
+  doc.rect(0, 0, 595, 175).fill(NAVY);
+  doc.rect(0, 175, 595, 3).fill(GOLD);
+  doc.fontSize(24).fillColor(WHITE).font('Helvetica-Bold')
+    .text('CONTRACT REVIEW REPORT', 50, 52, { width: W, align: 'center' });
+  doc.fontSize(10).fillColor('#CBD5E1').font('Helvetica')
+    .text('AI-Powered Legal Analysis  ·  Indian Law', 50, 90, { width: W, align: 'center' });
+  doc.fontSize(8).fillColor('#94A3B8').font('Helvetica')
+    .text(new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' }),
+          50, 114, { width: W, align: 'center' });
 
-  // Score panel — horizontal card replacing the isolated circle
-  var panelY = 208, panelH = 124;
-  doc.roundedRect(50, panelY, W, panelH, 5).fill(LIGHTBG);
-  // ── Left zone: semicircle gauge ──────────────────────────────────────────
-  var gCx = 114, gCy = panelY + 78, gR = 44;
-  // Track (full top semicircle, clockwise from left to right through top)
+  // ── Semicircle gauge (centred, dashboard-style) ─────────────────────────────
+  var gCx = 297, gCy = 308, gR = 82;
+
+  // Coloured zone bands (drawn as thick arcs)
   doc.save();
-  doc.lineWidth(11).lineCap('round');
-  doc.arc(gCx, gCy, gR, Math.PI, 2 * Math.PI, false)
-     .strokeColor('#E5E7EB').stroke();
-  // Filled arc proportional to score
-  if (score > 0) {
-    doc.arc(gCx, gCy, gR, Math.PI, Math.PI + (score / 100) * Math.PI, false)
-       .strokeColor(sc).stroke();
-  }
+  doc.lineWidth(18).lineCap('butt');
+  // Critical  0–35 → red
+  doc.arc(gCx, gCy, gR, Math.PI, Math.PI + 0.35 * Math.PI, false).strokeColor('#ef4444').stroke();
+  // Poor     35–55 → orange
+  doc.arc(gCx, gCy, gR, Math.PI + 0.35 * Math.PI, Math.PI + 0.55 * Math.PI, false).strokeColor('#f97316').stroke();
+  // Fair     55–70 → amber
+  doc.arc(gCx, gCy, gR, Math.PI + 0.55 * Math.PI, Math.PI + 0.70 * Math.PI, false).strokeColor('#eab308').stroke();
+  // Good    70–100 → green
+  doc.arc(gCx, gCy, gR, Math.PI + 0.70 * Math.PI, 2 * Math.PI, false).strokeColor('#22c55e').stroke();
   doc.restore();
-  // Score text — below arc centre, no overlap with stroke
-  doc.fontSize(22).fillColor(sc).font('Helvetica-Bold')
-    .text(String(score), 62, gCy + 6, { width: 104, align: 'center', lineBreak: false });
+
+  // Needle pointer from centre to arc edge
+  var needleAngle = Math.PI + (score / 100) * Math.PI;
+  var nX = gCx + (gR - 4) * Math.cos(needleAngle);
+  var nY = gCy + (gR - 4) * Math.sin(needleAngle);
+  doc.save();
+  doc.moveTo(gCx, gCy).lineTo(nX, nY).lineWidth(3).strokeColor(NAVY).stroke();
+  doc.circle(gCx, gCy, 7).fill(NAVY);
+  doc.restore();
+
+  // End-of-arc labels
   doc.fontSize(7).fillColor(GREY).font('Helvetica')
-    .text('/ 100  ·  Grade ' + grade, 62, gCy + 30, { width: 104, align: 'center', lineBreak: false });
+    .text('0', gCx - gR - 20, gCy - 4, { lineBreak: false });
+  doc.fontSize(7).fillColor(GREY).font('Helvetica')
+    .text('100', gCx + gR + 5, gCy - 4, { lineBreak: false });
 
-  // Centre separator
-  doc.moveTo(192, panelY + 16).lineTo(192, panelY + panelH - 16).lineWidth(0.5).strokeColor(GREY).stroke();
+  // Score text + grade label below gauge
+  doc.fontSize(32).fillColor(sc).font('Helvetica-Bold')
+    .text(String(score), gCx - 60, gCy + 16, { width: 120, align: 'center', lineBreak: false });
+  doc.fontSize(9).fillColor(GREY).font('Helvetica')
+    .text('out of 100', gCx - 40, gCy + 50, { width: 80, align: 'center', lineBreak: false });
+  doc.fontSize(11).fillColor(NAVY).font('Helvetica-Bold')
+    .text('Grade ' + grade + '  —  ' + gLabel, gCx - 100, gCy + 64, { width: 200, align: 'center', lineBreak: false });
 
-  // ── Centre zone: pie chart (risk distribution) ───────────────────────────
-  var pieCx = 243, pieCy = panelY + 56, pieR = 28;
-  var pieTotal = riskCounts.h + riskCounts.m + riskCounts.l || 1;
-  var gapRad = 3 * Math.PI / 180;
-  var pieStart = -Math.PI / 2; // start at 12 o'clock
-  [[riskCounts.h, RED], [riskCounts.m, AMBER], [riskCounts.l, GREEN]].forEach(function(seg) {
+  // ── 4 Metric Cards ───────────────────────────────────────────────────────────
+  var cRowY = gCy + 92, cW = Math.floor((W - 15) / 4), cH = 64;
+  [
+    { lbl: 'HIGH RISK',  val: String(riskCounts.h), color: '#ef4444', bg: '#FEF2F2' },
+    { lbl: 'MEDIUM',     val: String(riskCounts.m), color: '#f97316', bg: '#FFF7ED' },
+    { lbl: 'LOW RISK',   val: String(riskCounts.l), color: '#22c55e', bg: '#F0FDF4' },
+    { lbl: 'VERDICT',    val: recommendation,       color: recC,      bg: '#F8FAFC' },
+  ].forEach(function(card, i) {
+    var cx = 50 + i * (cW + 5);
+    doc.roundedRect(cx, cRowY, cW, cH, 4).fill(card.bg);
+    doc.rect(cx, cRowY, cW, 3).fill(card.color);
+    doc.fontSize(7).fillColor(GREY).font('Helvetica-Bold')
+      .text(card.lbl, cx, cRowY + 10, { width: cW, align: 'center', lineBreak: false });
+    var vSize = card.lbl === 'VERDICT' ? 13 : 24;
+    doc.fontSize(vSize).fillColor(card.color).font('Helvetica-Bold')
+      .text(card.val, cx, cRowY + 24, { width: cW, align: 'center', lineBreak: false });
+  });
+
+  // ── Pie chart + summary text ──────────────────────────────────────────────
+  var row3Y = cRowY + cH + 20;
+
+  // Pie (left half)
+  var pCx = 120, pCy = row3Y + 44, pR = 36;
+  var pTotal = riskCounts.h + riskCounts.m + riskCounts.l || 1;
+  var pGap = 3 * Math.PI / 180, pStart = -Math.PI / 2;
+  [[riskCounts.h, '#ef4444'], [riskCounts.m, '#f97316'], [riskCounts.l, '#22c55e']].forEach(function(seg) {
     if (seg[0] === 0) return;
-    var sweep = (seg[0] / pieTotal) * 2 * Math.PI - gapRad;
+    var sweep = (seg[0] / pTotal) * 2 * Math.PI - pGap;
+    if (sweep <= 0) return;
+    var sx = pCx + pR * Math.cos(pStart), sy = pCy + pR * Math.sin(pStart);
     doc.save();
-    doc.moveTo(pieCx, pieCy);
-    doc.arc(pieCx, pieCy, pieR, pieStart, pieStart + sweep, false);
-    doc.closePath();
-    doc.fill(seg[1]);
+    doc.moveTo(pCx, pCy).lineTo(sx, sy)
+       .arc(pCx, pCy, pR, pStart, pStart + sweep, false)
+       .closePath().fill(seg[1]);
     doc.restore();
-    pieStart += sweep + gapRad;
+    pStart += sweep + pGap;
   });
-  // Pie legend
-  var legY = pieCy + pieR + 8;
-  var gradeLabel = score >= 90 ? 'Excellent' : score >= 80 ? 'Good' : score >= 70 ? 'Satisfactory' : score >= 60 ? 'Fair' : score >= 50 ? 'Below Average' : score >= 35 ? 'Poor' : 'Critical Risk';
-  [[riskCounts.h, RED, 'High'], [riskCounts.m, AMBER, 'Med'], [riskCounts.l, GREEN, 'Low']].forEach(function(leg, i) {
-    var ly = legY + i * 10;
-    doc.roundedRect(202, ly + 1, 7, 7, 1).fill(leg[1]);
+  var pLegY = pCy + pR + 8;
+  [['#ef4444', riskCounts.h + ' High'], ['#f97316', riskCounts.m + ' Medium'], ['#22c55e', riskCounts.l + ' Low']]
+    .forEach(function(leg, i) {
+      doc.roundedRect(58, pLegY + i * 13, 8, 8, 1).fill(leg[0]);
+      doc.fontSize(7.5).fillColor(GREY).font('Helvetica')
+        .text(leg[1], 70, pLegY + i * 13 + 1, { lineBreak: false });
+    });
+
+  // Summary text (right of pie)
+  var sumRX = 195, sumRW = W - 145;
+  doc.fontSize(7.5).fillColor(GREY).font('Helvetica-Bold')
+    .text('ANALYSIS SUMMARY', sumRX, row3Y, { width: sumRW, lineBreak: false });
+  var coverSnip = summaryText.length > 290
+    ? summaryText.slice(0, 290).replace(/\s+\S*$/, '') + '…'
+    : summaryText;
+  doc.fontSize(8.5).fillColor(NAVY).font('Helvetica')
+    .text(coverSnip, sumRX, row3Y + 14, { width: sumRW, align: 'justify', lineGap: 2 });
+
+  // ── Document info ─────────────────────────────────────────────────────────
+  var divY = row3Y + 120;
+  doc.moveTo(50, divY).lineTo(545, divY).lineWidth(0.5).strokeColor(LIGHTBG).stroke();
+  doc.fontSize(8).fillColor(NAVY).font('Helvetica-Bold').text('Document:', 50, divY + 10, { lineBreak: false });
+  doc.fontSize(8).fillColor(GREY).font('Helvetica').text(filename, 110, divY + 10, { width: W - 60, lineBreak: false });
+  doc.fontSize(8).fillColor(NAVY).font('Helvetica-Bold').text('Review Type:', 50, divY + 23, { lineBreak: false });
+  doc.fontSize(8).fillColor(GREY).font('Helvetica').text('Neutral Legal Analysis — AI Legal Assistant', 110, divY + 23, { width: W - 60, lineBreak: false });
+
+  // ── Top risks at a glance ──────────────────────────────────────────────────
+  var glanceY = divY + 50;
+  doc.moveTo(50, glanceY).lineTo(545, glanceY).lineWidth(0.5).strokeColor(LIGHTBG).stroke();
+  doc.fontSize(7.5).fillColor(GREY).font('Helvetica-Bold')
+    .text('TOP RISKS AT A GLANCE', 50, glanceY + 8, { lineBreak: false });
+  var topRisks = riskData.slice().sort(function(a, b) {
+    var o = { HIGH: 0, MEDIUM: 1, LOW: 2 };
+    return (o[(a.severity || '').toUpperCase()] || 3) - (o[(b.severity || '').toUpperCase()] || 3);
+  }).slice(0, 4);
+  topRisks.forEach(function(r, i) {
+    var gy = glanceY + 22 + i * 28;
+    var sev = (r.severity || '').toUpperCase();
+    var bc  = sev === 'HIGH' ? '#ef4444' : sev === 'MEDIUM' ? '#f97316' : '#22c55e';
+    var rTxt = (r.risk || r.description || '').replace(/\*\*/g, '');
+    var eTxt = (r.explanation || '').replace(/\*\*/g, '');
+    doc.roundedRect(50, gy, 44, 14, 2).fill(bc);
+    doc.fontSize(6.5).fillColor(WHITE).font('Helvetica-Bold')
+      .text(sev.slice(0, 3), 50, gy + 4, { width: 44, align: 'center', lineBreak: false });
+    doc.fontSize(7.5).fillColor(NAVY).font('Helvetica-Bold')
+      .text(rTxt.length > 72 ? rTxt.slice(0, 69) + '…' : rTxt, 100, gy, { width: 270, lineBreak: false });
     doc.fontSize(7).fillColor(GREY).font('Helvetica')
-      .text(leg[0] + ' ' + leg[2], 212, ly, { width: 72, lineBreak: false });
+      .text(eTxt.length > 90 ? eTxt.slice(0, 87) + '…' : eTxt, 100, gy + 11, { width: 445, lineBreak: false });
   });
-  // Right: verdict badge
-  doc.roundedRect(308, panelY + 20, 220, 84, 4).fill(recC);
-  doc.fontSize(9).fillColor(WHITE).font('Helvetica')
-    .text('VERDICT', 308, panelY + 32, { width: 220, align: 'center', lineBreak: false });
-  doc.fontSize(20).fillColor(WHITE).font('Helvetica-Bold')
-    .text(recommendation, 308, panelY + 52, { width: 220, align: 'center', lineBreak: false });
 
-  // Risk count row
-  var rY = panelY + panelH + 22, rW = 150, rH = 56;
-  var rboxes = [[String(riskCounts.h), 'HIGH RISK', RED], [String(riskCounts.m), 'MEDIUM RISK', AMBER], [String(riskCounts.l), 'LOW RISK', GREEN]];
-  for (var rbi = 0; rbi < rboxes.length; rbi++) {
-    var rbx = 50 + rbi * (rW + 12);
-    doc.roundedRect(rbx, rY, rW, rH, 4).fill(rboxes[rbi][2]);
-    doc.fontSize(24).fillColor(WHITE).font('Helvetica-Bold').text(rboxes[rbi][0], rbx, rY + 6, { width: rW, align: 'center' });
-    doc.fontSize(7).fillColor(WHITE).font('Helvetica').text(rboxes[rbi][1], rbx, rY + 36, { width: rW, align: 'center' });
-  }
-
-  // Summary snippet (first 240 chars)
-  var snipY = rY + rH + 28;
-  var snip = summaryText.length > 240 ? summaryText.substring(0, 240) + '…' : summaryText;
-  doc.fontSize(9).fillColor(GREY).font('Helvetica-Oblique')
-    .text(snip, 50, snipY, { width: W, align: 'justify', lineGap: 2 });
-
-  // Document metadata (positioned after snippet, dynamic y)
-  var metaY = doc.y + 22;
-  doc.moveTo(50, metaY).lineTo(545, metaY).lineWidth(0.5).strokeColor(LIGHTBG).stroke();
-  metaY += 12;
-  doc.fontSize(8).fillColor(SLATE).font('Helvetica-Bold')
-    .text('Document', 50, metaY, { width: 80, lineBreak: false });
-  doc.fontSize(8).fillColor(GREY).font('Helvetica')
-    .text(filename, 135, metaY, { width: W - 85, lineBreak: false });
-  doc.fontSize(8).fillColor(SLATE).font('Helvetica-Bold')
-    .text('Review Type', 50, metaY + 14, { width: 80, lineBreak: false });
-  doc.fontSize(8).fillColor(GREY).font('Helvetica')
-    .text('Neutral Legal Analysis — AI Legal Assistant', 135, metaY + 14, { width: W - 85, lineBreak: false });
-
-  // Bottom band — ALL text kept at y < 792 (pdfkit safe zone: page_height 842 − margin 50 = 792)
-  // Band starts at 630; text at 656 and 674 — both safe
-  doc.rect(0, 630, 595, 212).fill(SLATE);
-  doc.rect(0, 630, 595, 3).fill(BLUE);
-  doc.fontSize(9).fillColor(LIGHTBG).font('Helvetica')
-    .text('AI Legal Assistant', 50, 656, { width: W, align: 'center' });
-  doc.fontSize(7).fillColor(GREY).font('Helvetica')
-    .text('This report is for informational purposes only and does not constitute legal advice.',
-          50, 674, { width: W, align: 'center' });
+  // ── Slim footer bar ───────────────────────────────────────────────────────
+  doc.rect(0, 814, 595, 28).fill(NAVY);
+  doc.rect(0, 814, 595, 2).fill(GOLD);
+  doc.fontSize(7.5).fillColor('#94A3B8').font('Helvetica')
+    .text('AI Legal Assistant  ·  For informational purposes only  ·  Not legal advice',
+          50, 822, { width: W, align: 'center', lineBreak: false });
 
   cover = false;
 
   // ── Executive Summary ──────────────────────────────────────────────────────
   secHdr('Executive Summary');
 
-  var sumLeftW  = Math.floor(W * 0.58);  // 287
-  var sumRightW = Math.floor(W * 0.38);  // 188
-  var sumGap    = W - sumLeftW - sumRightW; // 20
-  var sumRightX = 50 + sumLeftW + sumGap;   // 357
-  var sumStartY = doc.y;
+  var esLeftW  = Math.floor(W * 0.57);
+  var esRightW = Math.floor(W * 0.39);
+  var esGap    = W - esLeftW - esRightW;
+  var esRightX = 50 + esLeftW + esGap;
+  var esStartY = doc.y;
 
   // ── LEFT COLUMN ────────────────────────────────────────────────────────────
-  // Shortened prose (word-boundary truncation at 200 chars)
-  var shortSummary = summaryText.length > 200
-    ? summaryText.slice(0, 200).replace(/\s+\S*$/, '') + '…'
-    : summaryText;
-  doc.fontSize(10).fillColor(SLATE).font('Helvetica')
-    .text(shortSummary, 50, sumStartY, { width: sumLeftW, align: 'justify', lineGap: 2 });
+  // Risk score inline badge
+  var esScColor = score >= 70 ? GREEN : score >= 50 ? AMBER : RED;
+  doc.roundedRect(50, esStartY, 62, 22, 3).fill(esScColor);
+  doc.fontSize(11).fillColor(WHITE).font('Helvetica-Bold')
+    .text(String(score) + '/100', 50, esStartY + 5, { width: 62, align: 'center', lineBreak: false });
+  var esGLabel = score >= 90 ? 'Excellent' : score >= 80 ? 'Good' : score >= 70 ? 'Satisfactory'
+               : score >= 60 ? 'Fair' : score >= 50 ? 'Below Average' : score >= 35 ? 'Poor' : 'Critical Risk';
+  doc.fontSize(8).fillColor(GREY).font('Helvetica')
+    .text('Risk Score  ·  Grade ' + grade + ' — ' + esGLabel, 120, esStartY + 7, { width: esLeftW - 72, lineBreak: false });
 
-  // Risk count pills (below prose)
-  var pillY = doc.y + 10;
-  var pillW = Math.floor((sumLeftW - 10) / 3);
-  var pillH = 40;
-  if (pillY + pillH < CBOT) {
-    [[String(riskCounts.h), 'HIGH', RED], [String(riskCounts.m), 'MED', AMBER], [String(riskCounts.l), 'LOW', GREEN]]
+  // Full prose summary
+  doc.fontSize(9.5).fillColor(NAVY).font('Helvetica')
+    .text(summaryText, 50, esStartY + 32, { width: esLeftW, align: 'justify', lineGap: 2 });
+
+  // Risk count pills
+  var esPillY = doc.y + 10;
+  var esPillW = Math.floor((esLeftW - 10) / 3);
+  if (esPillY + 42 < CBOT) {
+    [[String(riskCounts.h), 'HIGH', '#ef4444'], [String(riskCounts.m), 'MEDIUM', '#f97316'], [String(riskCounts.l), 'LOW', '#22c55e']]
       .forEach(function(p, i) {
-        var px = 50 + i * (pillW + 5);
-        doc.roundedRect(px, pillY, pillW, pillH, 3).fill(p[2]);
-        doc.fontSize(18).fillColor(WHITE).font('Helvetica-Bold').text(p[0], px, pillY + 4, { width: pillW, align: 'center' });
-        doc.fontSize(7).fillColor(WHITE).font('Helvetica').text(p[1], px, pillY + 26, { width: pillW, align: 'center' });
+        var px = 50 + i * (esPillW + 5);
+        doc.roundedRect(px, esPillY, esPillW, 40, 3).fill(p[2]);
+        doc.fontSize(18).fillColor(WHITE).font('Helvetica-Bold').text(p[0], px, esPillY + 4, { width: esPillW, align: 'center' });
+        doc.fontSize(7).fillColor(WHITE).font('Helvetica').text(p[1], px, esPillY + 26, { width: esPillW, align: 'center' });
       });
-    doc.y = pillY + pillH + 10;
+    doc.y = esPillY + 40 + 10;
   }
 
-  // Inline HIGH risks (top 2, red left bar)
-  var sumHighRisks = riskData.filter(function(r) { return (r.severity || '').toUpperCase() === 'HIGH'; }).slice(0, 2);
-  sumHighRisks.forEach(function(r) {
-    if (doc.y > CBOT - 40) return;
-    var rt   = (r.risk || r.description || '').replace(/\*\*/g, '');
-    var expl = (r.explanation || '').replace(/\*\*/g, '');
-    var iy   = doc.y;
-    doc.rect(50, iy, 3, 30).fill(RED);
-    doc.fontSize(8).fillColor(SLATE).font('Helvetica-Bold')
-      .text(rt.length > 60 ? rt.slice(0, 57) + '…' : rt, 60, iy, { width: sumLeftW - 10, lineBreak: false });
-    doc.fontSize(7).fillColor(GREY).font('Helvetica')
-      .text(expl.length > 80 ? expl.slice(0, 77) + '…' : expl, 60, iy + 13, { width: sumLeftW - 10 });
-    doc.y += 6;
-  });
+  // ── RIGHT COLUMN ────────────────────────────────────────────────────────────
+  var rcY = esStartY;
 
-  // ── RIGHT COLUMN ───────────────────────────────────────────────────────────
-  var cardY = sumStartY;
+  // Parties
   doc.fontSize(7).fillColor(GREY).font('Helvetica-Bold')
-    .text('CRITICAL ISSUES', sumRightX, cardY, { width: sumRightW, lineBreak: false });
-  cardY += 12;
+    .text('PARTIES TO THE AGREEMENT', esRightX, rcY, { width: esRightW, lineBreak: false });
+  rcY += 12;
+  if (metaData && metaData.parties) {
+    doc.fontSize(8).fillColor(NAVY).font('Helvetica')
+      .text(String(metaData.parties).replace(/\*\*/g, ''), esRightX, rcY, { width: esRightW });
+    rcY = doc.y + 6;
+  } else {
+    doc.fontSize(8).fillColor(GREY).font('Helvetica').text('—', esRightX, rcY, { lineBreak: false });
+    rcY += 14;
+  }
 
-  var cardRisks = riskData.slice().sort(function(a, b) {
-    var ord = { HIGH: 0, MEDIUM: 1, LOW: 2 };
-    return (ord[(a.severity || '').toUpperCase()] || 3) - (ord[(b.severity || '').toUpperCase()] || 3);
-  }).slice(0, 3);
-
-  cardRisks.forEach(function(r) {
-    var sev    = (r.severity || '').toUpperCase();
-    var cardBg = sev === 'HIGH' ? '#FEF2F2' : sev === 'MEDIUM' ? '#FFFBEB' : '#F0FDF4';
-    var cardBd = sev === 'HIGH' ? RED : sev === 'MEDIUM' ? AMBER : GREEN;
-    var label  = sev + (r.clauseRef ? ' · ' + r.clauseRef : '');
-    var body   = (r.risk || r.description || '').replace(/\*\*/g, '');
-    var bodyS  = body.length > 60 ? body.slice(0, 57) + '…' : body;
-    var cardH  = 44;
-    if (cardY + cardH > CBOT) return;
-    doc.rect(sumRightX, cardY, sumRightW, cardH).fill(cardBg);
-    doc.rect(sumRightX, cardY, 3, cardH).fill(cardBd);
-    doc.fontSize(7).fillColor(cardBd).font('Helvetica-Bold')
-      .text(label, sumRightX + 6, cardY + 5, { width: sumRightW - 10, lineBreak: false });
-    doc.fontSize(7).fillColor(SLATE).font('Helvetica')
-      .text(bodyS, sumRightX + 6, cardY + 17, { width: sumRightW - 10 });
-    cardY += cardH + 5;
+  // Contract snapshot
+  doc.moveTo(esRightX, rcY).lineTo(esRightX + esRightW, rcY).lineWidth(0.5).strokeColor(LIGHTBG).stroke();
+  rcY += 8;
+  doc.fontSize(7).fillColor(GREY).font('Helvetica-Bold')
+    .text('CONTRACT SNAPSHOT', esRightX, rcY, { width: esRightW, lineBreak: false });
+  rcY += 11;
+  [
+    ['Type',  metaData && metaData.contractType  ? metaData.contractType  : '—'],
+    ['Date',  metaData && metaData.effectiveDate  ? metaData.effectiveDate : '—'],
+    ['Term',  metaData && metaData.term           ? metaData.term          : '—'],
+    ['Value', metaData && metaData.totalValue     ? metaData.totalValue    : '—'],
+    ['Law',   metaData && metaData.governingLaw   ? metaData.governingLaw  : '—'],
+  ].forEach(function(sf) {
+    if (rcY > CBOT - 12) return;
+    doc.fontSize(7).fillColor(GOLD).font('Helvetica-Bold')
+      .text(sf[0] + ':', esRightX, rcY, { width: 36, lineBreak: false });
+    var v = String(sf[1]).length > 28 ? String(sf[1]).slice(0, 25) + '…' : String(sf[1]);
+    doc.fontSize(7).fillColor(NAVY).font('Helvetica')
+      .text(v, esRightX + 38, rcY, { width: esRightW - 40, lineBreak: false });
+    rcY += 12;
   });
 
-  // ── Contract Metadata ──────────────────────────────────────────────────────
+  // Recommended actions
+  if (rcY < CBOT - 55 && recoData.length > 0) {
+    doc.moveTo(esRightX, rcY + 2).lineTo(esRightX + esRightW, rcY + 2).lineWidth(0.5).strokeColor(LIGHTBG).stroke();
+    rcY += 10;
+    doc.fontSize(7).fillColor(GREY).font('Helvetica-Bold')
+      .text('RECOMMENDED ACTIONS', esRightX, rcY, { width: esRightW, lineBreak: false });
+    rcY += 11;
+    recoData.slice(0, 3).forEach(function(reco) {
+      if (rcY > CBOT - 20) return;
+      var pri   = reco.priority || 'P?';
+      var rtext = String(reco.recommendation || reco.action || reco.description || '').replace(/\*\*/g, '');
+      var sR    = rtext.length > 52 ? rtext.slice(0, 49) + '…' : rtext;
+      var pc    = pri === 'P0' ? RED : pri === 'P1' ? AMBER : GOLD;
+      doc.rect(esRightX, rcY + 1, 20, 12).fill(pc);
+      doc.fontSize(6.5).fillColor(WHITE).font('Helvetica-Bold')
+        .text(pri, esRightX, rcY + 4, { width: 20, align: 'center', lineBreak: false });
+      doc.fontSize(7).fillColor(NAVY).font('Helvetica')
+        .text(sR, esRightX + 24, rcY, { width: esRightW - 26 });
+      rcY = doc.y + 2;
+    });
+  }
+
+  // ── Full risk list below columns (uses remaining whitespace) ─────────────────
+  var esEndY = Math.max(doc.y, rcY) + 16;
+  if (esEndY < CBOT - 80) {
+    doc.moveTo(50, esEndY).lineTo(545, esEndY).lineWidth(0.5).strokeColor(LIGHTBG).stroke();
+    doc.fontSize(7.5).fillColor(GREY).font('Helvetica-Bold')
+      .text('ALL IDENTIFIED RISKS', 50, esEndY + 8, { lineBreak: false });
+    var esRisks = riskData.slice().sort(function(a, b) {
+      var o = { HIGH: 0, MEDIUM: 1, LOW: 2 };
+      return (o[(a.severity || '').toUpperCase()] || 3) - (o[(b.severity || '').toUpperCase()] || 3);
+    });
+    var esRY = esEndY + 20;
+    esRisks.forEach(function(r) {
+      if (esRY > CBOT - 28) return;
+      var sev = (r.severity || '').toUpperCase();
+      var bc  = sev === 'HIGH' ? '#ef4444' : sev === 'MEDIUM' ? '#f97316' : '#22c55e';
+      var bg  = sev === 'HIGH' ? '#FEF2F2' : sev === 'MEDIUM' ? '#FFF7ED' : '#F0FDF4';
+      var rt  = (r.risk || r.description || '').replace(/\*\*/g, '');
+      var et  = (r.explanation || '').replace(/\*\*/g, '');
+      doc.rect(50, esRY, W, 24).fill(bg);
+      doc.rect(50, esRY, 3, 24).fill(bc);
+      doc.roundedRect(57, esRY + 5, 32, 12, 2).fill(bc);
+      doc.fontSize(6.5).fillColor(WHITE).font('Helvetica-Bold')
+        .text(sev.slice(0, 3), 57, esRY + 8, { width: 32, align: 'center', lineBreak: false });
+      doc.fontSize(7.5).fillColor(NAVY).font('Helvetica-Bold')
+        .text(rt.length > 70 ? rt.slice(0, 67) + '…' : rt, 94, esRY + 2, { width: 240, lineBreak: false });
+      doc.fontSize(7).fillColor(GREY).font('Helvetica')
+        .text(et.length > 100 ? et.slice(0, 97) + '…' : et, 94, esRY + 13, { width: W - 50, lineBreak: false });
+      esRY += 26;
+    });
+    doc.y = esRY + 4;
+  }
+
+  // ── Agreement Profile ──────────────────────────────────────────────────────
   if (metaData) {
-    secHdr('Contract Metadata');
-    var mfields = [
-      ['Contract Type',   metaData.contractType  || 'Not identified'],
-      ['Parties',         metaData.parties        || 'Not specified'],
-      ['Effective Date',  metaData.effectiveDate  || 'Not specified'],
-      ['Term / Duration', metaData.term           || 'Not specified'],
-      ['Governing Law',   metaData.governingLaw   || 'Not specified'],
-      ['Total Value',     metaData.totalValue     || 'Not specified'],
+    secHdr('Agreement Profile');
+
+    // Intro banner
+    doc.rect(50, doc.y, W, 22).fill('#F1F5F9');
+    doc.rect(50, doc.y, 3, 22).fill(GOLD);
+    doc.fontSize(8).fillColor(GREY).font('Helvetica-Oblique')
+      .text('Structured metadata extracted by AI from the contract document.',
+            60, doc.y + 7, { width: W - 20, lineBreak: false });
+    doc.y += 30;
+
+    var apFields = [
+      ['Contract Type',    metaData.contractType                        || '—'],
+      ['Parties',          metaData.parties                             || '—'],
+      ['Effective Date',   metaData.effectiveDate                       || '—'],
+      ['Term / Duration',  metaData.term                                || '—'],
+      ['Governing Law',    metaData.governingLaw                        || '—'],
+      ['Jurisdiction',     metaData.jurisdiction || metaData.governingLaw || '—'],
+      ['Contract Value',   metaData.totalValue   || metaData.contractValue || '—'],
+      ['Renewal Terms',    metaData.renewalTerms || metaData.renewal       || '—'],
     ];
-    drawTable(['Field', 'Details'], mfields, [130, W - 130]);
+    var apRH = 26, apY = doc.y;
+    apFields.forEach(function(f, i) {
+      if (apY + apRH > CBOT) { doc.addPage(); apY = 98; }
+      var bg = i % 2 === 0 ? '#F8FAFC' : WHITE;
+      doc.rect(50, apY, W, apRH).fill(bg);
+      doc.rect(50, apY, 3, apRH).fill(GOLD);
+      doc.fontSize(9).fillColor(NAVY).font('Helvetica-Bold')
+        .text(f[0], 60, apY + 8, { width: 140, lineBreak: false });
+      var val = String(f[1]).replace(/\*\*/g, '');
+      doc.fontSize(9).fillColor(GREY).font('Helvetica')
+        .text(val, 205, apY + 8, { width: W - 158, lineBreak: false, ellipsis: true });
+      apY += apRH;
+    });
+    doc.y = apY + 12;
   }
 
   // ── Key Clauses ────────────────────────────────────────────────────────────
@@ -747,20 +866,45 @@ app.get('/api/download/:sessionId', function(req, res) {
   // ── Risk Assessment ────────────────────────────────────────────────────────
   secHdr('Risk Assessment');
 
-  // Count tiles — 3 equal tiles, no exposure estimate
+  // Count tiles
   var tileW = Math.floor((W - 10) / 3);
-  var tileH = 52;
+  var tileH = 56;
   var tileY = doc.y;
-  [[String(riskCounts.h), 'HIGH RISK', RED, '#FEF2F2'],
-   [String(riskCounts.m), 'MEDIUM',    AMBER, '#FFFBEB'],
-   [String(riskCounts.l), 'LOW RISK',  GREEN, '#F0FDF4']
+  [
+    [String(riskCounts.h), 'HIGH RISK',   '#ef4444', '#FEF2F2'],
+    [String(riskCounts.m), 'MEDIUM RISK', '#f97316', '#FFF7ED'],
+    [String(riskCounts.l), 'LOW RISK',    '#22c55e', '#F0FDF4'],
   ].forEach(function(t, i) {
     var tx = 50 + i * (tileW + 5);
     doc.roundedRect(tx, tileY, tileW, tileH, 4).fill(t[3]);
-    doc.fontSize(24).fillColor(t[2]).font('Helvetica-Bold').text(t[0], tx, tileY + 6,  { width: tileW, align: 'center' });
-    doc.fontSize(7).fillColor(t[2]).font('Helvetica-Bold').text(t[1],  tx, tileY + 36, { width: tileW, align: 'center' });
+    doc.rect(tx, tileY, tileW, 3).fill(t[2]);
+    doc.fontSize(26).fillColor(t[2]).font('Helvetica-Bold').text(t[0], tx, tileY + 8,  { width: tileW, align: 'center' });
+    doc.fontSize(7).fillColor(t[2]).font('Helvetica-Bold').text(t[1], tx, tileY + 40, { width: tileW, align: 'center' });
   });
-  doc.y = tileY + tileH + 10;
+  doc.y = tileY + tileH + 14;
+
+  // Horizontal risk distribution bar
+  var raBarTotal = riskCounts.h + riskCounts.m + riskCounts.l || 1;
+  var raBarH = 10, raBarY = doc.y;
+  doc.fontSize(7).fillColor(GREY).font('Helvetica-Bold')
+    .text('Risk Distribution', 50, raBarY, { lineBreak: false });
+  raBarY += 12;
+  var raBarX = 50;
+  [[riskCounts.h, '#ef4444'], [riskCounts.m, '#f97316'], [riskCounts.l, '#22c55e']].forEach(function(s) {
+    if (s[0] === 0) return;
+    var bw = Math.round((s[0] / raBarTotal) * W);
+    doc.rect(raBarX, raBarY, bw, raBarH).fill(s[1]);
+    raBarX += bw;
+  });
+
+  // Severity legend
+  var raLegY = raBarY + raBarH + 6;
+  [['#ef4444', 'High Risk'], ['#f97316', 'Medium Risk'], ['#22c55e', 'Low Risk']].forEach(function(leg, i) {
+    var lx = 50 + i * 100;
+    doc.roundedRect(lx, raLegY, 8, 8, 1).fill(leg[0]);
+    doc.fontSize(7).fillColor(GREY).font('Helvetica').text(leg[1], lx + 11, raLegY + 1, { lineBreak: false });
+  });
+  doc.y = raLegY + 18;
 
   if (riskData.length > 0) {
     var sortedRisks = riskData.slice().sort(function(a, b) {
@@ -775,22 +919,28 @@ app.get('/api/download/:sessionId', function(req, res) {
 
   // ── Obligations & Deadlines ────────────────────────────────────────────────
   secHdr('Obligations & Deadlines');
+  doc.rect(50, doc.y, W, 22).fill('#F1F5F9');
+  doc.rect(50, doc.y, 3, 22).fill(GOLD);
+  doc.fontSize(8).fillColor(GREY).font('Helvetica-Oblique')
+    .text('Contractual duties, deadlines, and consequences of non-performance extracted from the agreement.',
+          60, doc.y + 7, { width: W - 20, lineBreak: false });
+  doc.y += 30;
   if (obligData.length > 0) {
     drawTable(
       ['Party', 'Obligation', 'Deadline', 'Consequence'],
       obligData.map(function(o) { return [o.party || '--', o.obligation || '--', o.deadline || '--', o.consequence || '--']; }),
-      [90, 155, 85, W - 330]
+      [80, 160, 85, W - 325]
     );
   } else {
     doc.fontSize(10).fillColor(GREY).text('No obligations data available.', 50, doc.y);
   }
 
   // ── Compliance Flags ───────────────────────────────────────────────────────
-  secHdr('Compliance Flags');
+  secHdr('Compliance & Legal Issues');
   if (compData.length > 0) {
     for (var cli = 0; cli < compData.length; cli++) {
       var item = compData[cli];
-      if (doc.y > CBOT - 40) { doc.addPage(); doc.y = CTOP; }
+      if (doc.y > CBOT - 40) { doc.addPage(); doc.y = 98; }
       var sev  = (item.severity || item.level || '').toUpperCase();
       var text = String(item.issue || item.description || item).replace(/\*\*/g, '');
       var calloutType = sev === 'HIGH' ? 'WARNING' : sev === 'LOW' ? 'TIP' : 'NOTE';
@@ -806,11 +956,11 @@ app.get('/api/download/:sessionId', function(req, res) {
     drawCallout('WARNING', 'The following standard clauses are absent from this contract. Missing protections can be as dangerous as unfavorable clauses — they leave gaps the other party can exploit.');
     doc.y += 4;
     for (var mpi = 0; mpi < missingData.length; mpi++) {
-      if (doc.y > CBOT - 28) { doc.addPage(); doc.y = CTOP; }
+      if (doc.y > CBOT - 28) { doc.addPage(); doc.y = 98; }
       var mptext = String(missingData[mpi] || '').replace(/\*\*/g, '');
       var mpy = doc.y;
       doc.rect(50, mpy + 4, 5, 5).fill(RED);
-      doc.fontSize(10).fillColor(SLATE).font('Helvetica').text(mptext, 64, mpy, { width: W - 14 });
+      doc.fontSize(10).fillColor(NAVY).font('Helvetica').text(mptext, 64, mpy, { width: W - 14 });
       doc.y += 4;
     }
   } else {
@@ -820,19 +970,37 @@ app.get('/api/download/:sessionId', function(req, res) {
 
   // ── Recommendations ────────────────────────────────────────────────────────
   secHdr('Recommendations');
+
+  // Priority legend
+  var recLegY = doc.y;
+  [['P0', RED, 'Critical — Act immediately'],
+   ['P1', '#E64A19', 'High — Before signing'],
+   ['P2', AMBER, 'Medium — Negotiate'],
+   ['P3', GREEN, 'Low — Best practice']].forEach(function(pl, i) {
+    var plx = 50 + i * 120;
+    doc.rect(plx, recLegY, 22, 13).fill(pl[1]);
+    doc.fontSize(7).fillColor(WHITE).font('Helvetica-Bold')
+      .text(pl[0], plx, recLegY + 3, { width: 22, align: 'center', lineBreak: false });
+    doc.fontSize(7).fillColor(GREY).font('Helvetica')
+      .text(pl[2], plx + 26, recLegY + 3, { lineBreak: false });
+  });
+  doc.y = recLegY + 22;
+
   if (recoData.length > 0) {
     var badgeColors = { P0: RED, P1: '#E64A19', P2: AMBER, P3: GREEN, P4: '#5C6BC0' };
     for (var rli = 0; rli < recoData.length; rli++) {
       var reco = recoData[rli];
-      if (doc.y > CBOT - 22) { doc.addPage(); doc.y = CTOP; }
+      if (doc.y > CBOT - 22) { doc.addPage(); doc.y = 98; }
       var pri   = reco.priority || ('P' + (rli + 1));
-      var bc    = badgeColors[pri] || SLATE;
+      var bc    = badgeColors[pri] || NAVY;
       var rtext = String(reco.recommendation || reco.action || reco.description || '').replace(/\*\*/g, '');
       var iy    = doc.y;
-      doc.rect(50, iy, 26, 15).fill(bc);
-      doc.fontSize(7.5).fillColor(WHITE).font('Helvetica-Bold').text(pri, 50, iy + 4, { width: 26, align: 'center', lineBreak: false });
-      doc.fontSize(9.5).fillColor(SLATE).font('Helvetica').text(rtext, 82, iy, { width: W - 32, lineGap: 2 });
-      doc.y += 6;
+      var recoSev = pri === 'P0' ? '#FEF2F2' : pri === 'P1' ? '#FFF7ED' : pri === 'P2' ? '#FFFBEB' : '#F0FDF4';
+      doc.rect(50, iy, W, 0).fill(recoSev); // placeholder — height set after text
+      doc.rect(50, iy, 28, 16).fill(bc);
+      doc.fontSize(8).fillColor(WHITE).font('Helvetica-Bold').text(pri, 50, iy + 4, { width: 28, align: 'center', lineBreak: false });
+      doc.fontSize(9.5).fillColor(NAVY).font('Helvetica').text(rtext, 84, iy, { width: W - 34, lineGap: 2 });
+      doc.y += 8;
     }
   } else {
     doc.fontSize(10).fillColor(GREY).text('No recommendations available.', 50, doc.y);
