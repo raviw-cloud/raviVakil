@@ -517,8 +517,7 @@
         progressFill.style.width = '100%';
 
         setTimeout(() => {
-          progressSec.style.display = 'none';
-          showResults(data);
+          window.location.href = '/results.html?sessionId=' + data.sessionId;
         }, 600);
 
       } catch (err) {

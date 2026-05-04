@@ -331,6 +331,16 @@ app.post('/api/analyze', analyzeLimit, upload.single('pdf'), async (req, res) =>
   }
 });
 
+// ── Results data route ────────────────────────────────────────────────────────
+
+app.get('/api/results/:sessionId', function(req, res) {
+  const cached = reportCache.get(req.params.sessionId);
+  if (!cached) return res.status(404).json({ error: 'Session not found. Please re-analyze.' });
+  const { results, score, grade, recommendation, filename } = cached;
+  const summaryText = (results.clauses && results.clauses.summary) || '';
+  res.json({ sessionId: req.params.sessionId, score, grade, recommendation, filename, summary: summaryText, results });
+});
+
 // ── PDF Download route ─────────────────────────────────────────────────────────
 
 app.get('/api/download/:sessionId', function(req, res) {
@@ -1007,6 +1017,39 @@ app.get('/api/download/:sessionId', function(req, res) {
   }
 
   doc.end();
+});
+
+// ── AI Drafting route ─────────────────────────────────────────────────────────
+
+app.post('/api/draft', express.json(), async (req, res) => {
+  const { prompt, sessionId } = req.body || {};
+  if (!prompt || typeof prompt !== 'string' || prompt.trim().length < 5) {
+    return res.status(400).json({ error: 'A drafting prompt is required.' });
+  }
+
+  let contractContext = '';
+  if (sessionId) {
+    const cached = reportCache.get(sessionId);
+    if (cached && cached.results && cached.results.clauses) {
+      const meta = cached.results.clauses.metadata || {};
+      contractContext = '\n\nContract context: ' + (meta.contractType || '') +
+        (meta.parties ? ', Parties: ' + meta.parties : '') +
+        (meta.governingLaw ? ', Governing Law: ' + meta.governingLaw : '') + '.';
+    }
+  }
+
+  try {
+    const msg = await client.messages.create({
+      model: HAIKU_MODEL,
+      max_tokens: 1200,
+      system: [{ type: 'text', text: 'You are an expert Indian contract lawyer. Draft clear, precise, enforceable contract clauses compliant with Indian law (Indian Contract Act 1872, relevant statutes). Return ONLY the drafted clause text — no preamble, no explanation, no JSON. Use plain legal English.', cache_control: { type: 'ephemeral' } }],
+      messages: [{ role: 'user', content: prompt.trim() + contractContext }],
+    });
+    res.json({ clause: msg.content[0].text });
+  } catch (err) {
+    console.error('[draft] error:', err);
+    res.status(500).json({ error: 'Drafting failed. Please try again.' });
+  }
 });
 
 const PORT = process.env.PORT || 3000;

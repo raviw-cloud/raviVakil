@@ -1,0 +1,859 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>VakilDesk — Contract Review Results</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+    .tab-btn.active { background: #4f46e5 !important; color: #fff !important; }
+    .tab-btn { transition: all 0.15s; }
+    .fade-in { animation: fadeIn 0.25s ease; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+    .preset-active { background: #4f46e5 !important; color: #fff !important; border-color: #4f46e5 !important; }
+    .timeline-dot { width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-center; font-size: 14px; position: relative; z-index: 1; flex-shrink: 0; }
+    .donut-ring { transition: stroke-dasharray 0.6s ease; }
+    #loading-overlay { position: fixed; inset: 0; background: rgba(248,250,252,0.95); z-index: 50; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; }
+    .spin { animation: spin 1s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-900 font-sans min-h-screen flex overflow-hidden">
+
+<!-- Loading overlay -->
+<div id="loading-overlay">
+  <div class="w-10 h-10 rounded-full border-4 border-indigo-200 border-t-indigo-600 spin"></div>
+  <p class="text-sm font-semibold text-slate-500">Loading analysis…</p>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════
+     SIDEBAR
+══════════════════════════════════════════════════════════ -->
+<aside class="w-64 bg-white border-r border-slate-200 flex flex-col h-screen shrink-0 fixed left-0 top-0 z-10">
+
+  <div class="p-5 border-b border-slate-100">
+    <div class="flex items-center gap-3 mb-1">
+      <div class="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center text-white text-sm font-black shadow">⚖</div>
+      <span class="font-black text-lg tracking-tight">VakilDesk</span>
+    </div>
+    <p class="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Contract Review Report</p>
+  </div>
+
+  <nav class="p-3 flex-1 space-y-0.5 overflow-y-auto">
+    <button onclick="switchTab('overview')"        class="tab-btn active w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-semibold text-slate-600 hover:bg-slate-100" data-tab="overview">      <span>📊</span> Overview</button>
+    <button onclick="switchTab('profile')"         class="tab-btn w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-semibold text-slate-600 hover:bg-slate-100" data-tab="profile">       <span>👤</span> Agreement Profile</button>
+    <button onclick="switchTab('clauses')"         class="tab-btn w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-semibold text-slate-600 hover:bg-slate-100" data-tab="clauses">       <span>📄</span> Key Clauses</button>
+    <button onclick="switchTab('risks')"           class="tab-btn w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-semibold text-slate-600 hover:bg-slate-100" data-tab="risks">         <span>⚠️</span> Risk Assessment</button>
+    <button onclick="switchTab('obligations')"     class="tab-btn w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-semibold text-slate-600 hover:bg-slate-100" data-tab="obligations">   <span>🕐</span> Obligations</button>
+    <button onclick="switchTab('missing')"         class="tab-btn w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-semibold text-slate-600 hover:bg-slate-100" data-tab="missing">       <span>🔒</span> Missing Protections</button>
+    <button onclick="switchTab('recommendations')" class="tab-btn w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-semibold text-slate-600 hover:bg-slate-100" data-tab="recommendations"><span>✅</span> Recommendations</button>
+    <button onclick="switchTab('drafting')"        class="tab-btn w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-semibold text-slate-600 hover:bg-slate-100" data-tab="drafting">      <span>✍️</span> AI Drafting Room</button>
+  </nav>
+
+  <div class="p-4 border-t border-slate-100">
+    <div id="sidebar-verdict-card" class="bg-rose-600 rounded-2xl p-4 text-white shadow-lg">
+      <p class="text-[9px] font-black uppercase tracking-widest opacity-70 mb-0.5">Verdict</p>
+      <p id="sidebar-verdict-text" class="text-xl font-black leading-none mb-2">—</p>
+      <div class="w-full bg-white/20 h-1.5 rounded-full overflow-hidden">
+        <div id="sidebar-verdict-bar" class="bg-white h-full rounded-full" style="width:0%"></div>
+      </div>
+      <p id="sidebar-verdict-score" class="text-[10px] font-semibold mt-1.5 opacity-75">Score: — / 100</p>
+    </div>
+  </div>
+</aside>
+
+<!-- ═══════════════════════════════════════════════════════
+     MAIN CONTENT
+══════════════════════════════════════════════════════════ -->
+<main class="flex-1 ml-64 h-screen overflow-y-auto bg-slate-50">
+  <div class="max-w-4xl mx-auto px-10 py-10">
+
+    <!-- Page header -->
+    <div class="flex justify-between items-end mb-8 pb-6 border-b border-slate-200">
+      <div>
+        <p class="text-indigo-600 font-bold text-xs uppercase tracking-widest mb-1">Legal Review Document</p>
+        <h2 class="text-3xl font-black text-slate-900 tracking-tight" id="page-title">Audit Summary</h2>
+      </div>
+      <div class="flex items-center gap-3">
+        <div class="text-right">
+          <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Document</p>
+          <p id="doc-ref-text" class="text-sm font-bold text-slate-700 max-w-[160px] truncate">—</p>
+        </div>
+        <a id="download-btn" href="#" class="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold px-4 py-2.5 rounded-xl transition-colors shadow">
+          ⬇ Download PDF
+        </a>
+      </div>
+    </div>
+
+
+    <!-- ═══════════ TAB: OVERVIEW ═══════════ -->
+    <div id="tab-overview" class="tab-content active fade-in space-y-6">
+
+      <div class="grid grid-cols-3 gap-4">
+
+        <!-- Donut chart card -->
+        <div class="bg-white rounded-3xl p-6 border border-slate-100 shadow-sm flex flex-col items-center justify-center">
+          <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Risk Distribution</p>
+          <svg viewBox="0 0 80 80" class="w-28 h-28 -rotate-90">
+            <circle cx="40" cy="40" r="28" fill="none" stroke="#f1f5f9" stroke-width="10"/>
+            <circle id="donut-high" class="donut-ring" cx="40" cy="40" r="28" fill="none" stroke="#ef4444" stroke-width="10" stroke-dasharray="0 176" stroke-dashoffset="0" stroke-linecap="butt"/>
+            <circle id="donut-med"  class="donut-ring" cx="40" cy="40" r="28" fill="none" stroke="#f97316" stroke-width="10" stroke-dasharray="0 176" stroke-dashoffset="0" stroke-linecap="butt"/>
+            <circle id="donut-low"  class="donut-ring" cx="40" cy="40" r="28" fill="none" stroke="#22c55e" stroke-width="10" stroke-dasharray="0 176" stroke-dashoffset="0" stroke-linecap="butt"/>
+          </svg>
+          <div id="donut-legend" class="flex gap-3 mt-2 text-[10px] font-bold">
+            <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-rose-500 inline-block"></span>— High</span>
+            <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-orange-500 inline-block"></span>— Med</span>
+            <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-emerald-500 inline-block"></span>— Low</span>
+          </div>
+        </div>
+
+        <!-- Grade card -->
+        <div class="bg-white rounded-3xl p-7 border border-slate-100 shadow-sm flex flex-col items-center justify-center">
+          <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Risk Grade</p>
+          <p id="ov-grade" class="text-7xl font-black text-rose-600 leading-none">—</p>
+          <p id="ov-grade-label" class="text-xs font-semibold text-slate-500 mt-2 uppercase italic">—</p>
+        </div>
+
+        <!-- Score + missing -->
+        <div class="bg-white rounded-3xl p-6 border border-slate-100 shadow-sm flex flex-col gap-4 justify-center">
+          <div class="text-center">
+            <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Score</p>
+            <p class="text-4xl font-black text-rose-500"><span id="ov-score">—</span><span class="text-lg text-slate-400 font-medium">/100</span></p>
+          </div>
+          <div class="h-px bg-slate-100"></div>
+          <div class="text-center">
+            <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Missing Clauses</p>
+            <p id="ov-missing" class="text-4xl font-black text-amber-500">—</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Analysis summary -->
+      <div class="bg-white rounded-3xl p-8 border border-slate-100 shadow-sm">
+        <div class="flex justify-between items-start mb-5">
+          <div>
+            <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Analysis Result</p>
+            <p id="ov-summary" class="text-lg font-bold text-slate-700 max-w-lg leading-snug">—</p>
+          </div>
+          <span id="ov-verdict-badge" class="bg-rose-50 text-rose-600 px-4 py-2 rounded-xl font-black text-xs uppercase tracking-wider shrink-0 ml-4 border border-rose-100">—</span>
+        </div>
+        <div id="ov-meta-stats" class="flex gap-10 pt-5 border-t border-dashed border-slate-100"></div>
+      </div>
+
+      <!-- Urgent banner (rendered dynamically) -->
+      <div id="overview-banner"></div>
+    </div>
+
+
+    <!-- ═══════════ TAB: AGREEMENT PROFILE ═══════════ -->
+    <div id="tab-profile" class="tab-content fade-in space-y-5">
+
+      <div class="grid grid-cols-3 gap-5">
+
+        <!-- Verdict card -->
+        <div id="prof-verdict-card" class="col-span-2 bg-rose-600 rounded-3xl p-7 text-white shadow-lg flex items-center justify-between">
+          <div>
+            <p class="text-[10px] font-black uppercase tracking-widest opacity-70 mb-1">Advocate's Verdict</p>
+            <p id="prof-verdict-text" class="text-4xl font-black leading-none mb-1">—</p>
+            <p id="prof-verdict-sub" class="text-rose-200 text-sm">—</p>
+          </div>
+          <div class="text-right opacity-20 select-none"><p id="prof-grade-big" class="text-8xl font-black leading-none">—</p></div>
+        </div>
+
+        <!-- Contract health gauge -->
+        <div class="bg-white rounded-3xl p-6 border border-slate-100 shadow-sm flex flex-col items-center justify-center">
+          <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Contract Health</p>
+          <svg viewBox="0 0 200 105" class="w-full max-w-[200px]">
+            <path d="M25,90 A75,75 0 0,0 175,90" fill="none" stroke="#e2e8f0" stroke-width="14" stroke-linecap="round"/>
+            <path d="M25,90 A75,75 0 0,0 66,23"  fill="none" stroke="#ef4444" stroke-width="14" stroke-linecap="butt" opacity="0.25"/>
+            <path d="M66,23 A75,75 0 0,0 112,16"  fill="none" stroke="#f97316" stroke-width="14" stroke-linecap="butt" opacity="0.25"/>
+            <path d="M112,16 A75,75 0 0,0 144,29"  fill="none" stroke="#eab308" stroke-width="14" stroke-linecap="butt" opacity="0.25"/>
+            <path d="M144,29 A75,75 0 0,0 175,90"  fill="none" stroke="#22c55e" stroke-width="14" stroke-linecap="butt" opacity="0.25"/>
+            <path id="gauge-fill" d="M25,90 A75,75 0 0,0 25,90" fill="none" stroke="#ef4444" stroke-width="14" stroke-linecap="round"/>
+            <line id="gauge-needle" x1="100" y1="90" x2="25" y2="90" stroke="#1e293b" stroke-width="2.5" stroke-linecap="round"/>
+            <circle cx="100" cy="90" r="5" fill="#1e293b"/>
+            <text x="14"  y="102" font-size="9" fill="#94a3b8" font-family="sans-serif" font-weight="600">0</text>
+            <text x="171" y="102" font-size="9" fill="#94a3b8" font-family="sans-serif" font-weight="600">100</text>
+          </svg>
+          <p class="text-2xl font-black -mt-2"><span id="prof-score-num" class="text-rose-600">—</span><span class="text-sm text-slate-400 font-medium">/100</span></p>
+          <p id="prof-grade-label" class="text-[10px] font-bold text-slate-400 uppercase mt-0.5 italic">—</p>
+        </div>
+      </div>
+
+      <!-- Parties + Legal standing -->
+      <div class="grid grid-cols-2 gap-5">
+        <div class="bg-white rounded-3xl p-7 border border-slate-100 shadow-sm space-y-4">
+          <h3 class="text-xs font-black uppercase tracking-widest text-slate-500">Transaction Parties</h3>
+          <div class="p-4 bg-slate-50 rounded-2xl border border-slate-100">
+            <p class="text-[10px] font-black text-indigo-600 uppercase tracking-widest mb-1">Party A</p>
+            <p id="prof-party-a" class="font-bold text-slate-800 leading-snug text-sm">—</p>
+          </div>
+          <div class="p-4 bg-slate-50 rounded-2xl border border-slate-100">
+            <p class="text-[10px] font-black text-indigo-600 uppercase tracking-widest mb-1">Party B</p>
+            <p id="prof-party-b" class="font-bold text-slate-800 text-sm">—</p>
+          </div>
+        </div>
+
+        <div class="bg-indigo-50 rounded-3xl p-7 border border-indigo-100 shadow-sm">
+          <h3 class="text-xs font-black uppercase tracking-widest text-indigo-800 mb-4">Legal Standing</h3>
+          <div id="prof-legal-standing" class="space-y-3"></div>
+        </div>
+      </div>
+
+      <!-- Financial overview -->
+      <div class="bg-white rounded-3xl p-7 border border-slate-100 shadow-sm">
+        <h3 class="text-xs font-black uppercase tracking-widest text-slate-500 mb-5">Contract Overview</h3>
+        <div id="prof-financial" class="grid grid-cols-4 gap-4"></div>
+      </div>
+
+      <!-- Important dates -->
+      <div class="bg-white rounded-3xl p-7 border border-slate-100 shadow-sm">
+        <h3 class="text-xs font-black uppercase tracking-widest text-slate-500 mb-5">Key Obligations &amp; Dates</h3>
+        <div id="prof-dates-grid" class="grid grid-cols-2 gap-3"></div>
+      </div>
+
+      <!-- Advocate notes -->
+      <div id="prof-notes-card" class="bg-amber-50 rounded-3xl p-7 border border-amber-100 shadow-sm hidden">
+        <h3 class="text-xs font-black uppercase tracking-widest text-amber-700 mb-4">Advocate Notes</h3>
+        <ul id="prof-notes" class="space-y-2.5 text-sm text-amber-900"></ul>
+      </div>
+    </div>
+
+
+    <!-- ═══════════ TAB: KEY CLAUSES ═══════════ -->
+    <div id="tab-clauses" class="tab-content fade-in space-y-4">
+      <div class="flex items-center gap-2 mb-2">
+        <span class="w-2 h-2 rounded-full bg-rose-500"></span>
+        <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Sorted by severity — highest risk first</p>
+      </div>
+      <div id="clauses-list" class="space-y-4"></div>
+    </div>
+
+
+    <!-- ═══════════ TAB: RISK ASSESSMENT ═══════════ -->
+    <div id="tab-risks" class="tab-content fade-in space-y-6">
+      <div id="risk-impact-section" class="bg-white rounded-3xl p-7 border border-slate-100 shadow-sm"></div>
+      <div id="risk-high-cards" class="space-y-4"></div>
+      <div id="risk-other-section"></div>
+    </div>
+
+
+    <!-- ═══════════ TAB: OBLIGATIONS + TIMELINE ═══════════ -->
+    <div id="tab-obligations" class="tab-content fade-in space-y-6">
+
+      <div class="bg-white rounded-3xl p-8 border border-slate-100 shadow-sm">
+        <h3 class="text-xs font-black uppercase tracking-widest text-slate-500 mb-8">Contract Timeline</h3>
+        <div id="oblig-timeline" class="relative"></div>
+      </div>
+
+      <div class="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden">
+        <div class="px-7 py-5 border-b border-slate-100 bg-slate-50">
+          <h3 class="text-xs font-black uppercase tracking-widest text-slate-500">Obligation Register</h3>
+        </div>
+        <div id="oblig-table"></div>
+      </div>
+    </div>
+
+
+    <!-- ═══════════ TAB: MISSING PROTECTIONS ═══════════ -->
+    <div id="tab-missing" class="tab-content fade-in">
+      <div class="mb-5 p-5 bg-amber-50 border border-amber-200 rounded-2xl text-sm text-amber-800 font-medium">
+        Missing protections can be as dangerous as unfavorable clauses — they leave gaps the other party can exploit.
+      </div>
+      <div id="missing-grid" class="grid grid-cols-2 gap-4"></div>
+    </div>
+
+
+    <!-- ═══════════ TAB: RECOMMENDATIONS ═══════════ -->
+    <div id="tab-recommendations" class="tab-content fade-in space-y-5">
+      <div class="bg-indigo-900 rounded-3xl p-7 text-white flex justify-between items-center">
+        <div>
+          <h3 class="text-lg font-black mb-1">Negotiation Roadmap</h3>
+          <p class="text-indigo-300 text-sm opacity-80">Priority fixes before final signature execution.</p>
+        </div>
+        <div class="flex gap-2">
+          <span class="bg-rose-500/20 border border-rose-400/20 text-rose-300 px-3 py-1 rounded text-[10px] font-black uppercase">P0: Critical</span>
+          <span class="bg-amber-500/20 border border-amber-400/20 text-amber-300 px-3 py-1 rounded text-[10px] font-black uppercase">P1: High</span>
+        </div>
+      </div>
+      <div id="reco-projection" class="bg-white rounded-3xl p-7 border border-slate-100 shadow-sm"></div>
+      <div id="reco-cards" class="grid grid-cols-2 gap-5"></div>
+    </div>
+
+
+    <!-- ═══════════ TAB: AI DRAFTING ROOM ═══════════ -->
+    <div id="tab-drafting" class="tab-content fade-in space-y-6">
+      <div class="bg-white rounded-3xl p-8 border border-slate-100 shadow-sm">
+        <h3 class="text-xl font-black mb-1">AI Legal Drafting Assistant</h3>
+        <p class="text-slate-500 text-sm mb-7">Generate protective replacement clauses using Claude AI, trained on Indian contract law.</p>
+
+        <div class="mb-6">
+          <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Quick Fix — Common Issues</p>
+          <div class="flex flex-wrap gap-2">
+            <button class="preset-btn px-5 py-2 rounded-xl text-sm font-bold border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 transition-all"
+              onclick="selectPreset(this, 'Draft a balanced termination clause with 60-day reciprocal notice for both parties under Indian Contract Act 1872.')">Termination</button>
+            <button class="preset-btn px-5 py-2 rounded-xl text-sm font-bold border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 transition-all"
+              onclick="selectPreset(this, 'Draft an arbitration clause with jurisdiction under Arbitration and Conciliation Act 1996.')">Arbitration</button>
+            <button class="preset-btn px-5 py-2 rounded-xl text-sm font-bold border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 transition-all"
+              onclick="selectPreset(this, 'Draft a Force Majeure clause covering natural disasters, lockdowns, and government restrictions under Indian law.')">Force Majeure</button>
+            <button class="preset-btn px-5 py-2 rounded-xl text-sm font-bold border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 transition-all"
+              onclick="selectPreset(this, 'Define Normal Wear and Tear clearly to prevent security deposit disputes.')">Wear &amp; Tear</button>
+            <button class="preset-btn px-5 py-2 rounded-xl text-sm font-bold border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 transition-all"
+              onclick="selectPreset(this, 'Draft an indemnification clause protecting against third-party claims under Indian Contract Act 1872.')">Indemnification</button>
+          </div>
+        </div>
+
+        <div class="mb-5">
+          <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Custom Request</p>
+          <textarea id="draft-prompt" rows="3"
+            placeholder="e.g. Draft a non-compete clause compliant with S.27 ICA for a software services agreement..."
+            class="w-full border border-slate-200 rounded-2xl px-5 py-4 text-sm text-slate-800 placeholder-slate-400 resize-none focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"></textarea>
+        </div>
+
+        <div class="flex gap-3">
+          <button id="generate-btn" onclick="generateClause()"
+            class="flex-1 bg-slate-900 hover:bg-slate-800 text-white py-4 rounded-2xl font-black text-sm uppercase tracking-widest flex items-center justify-center gap-2 transition-all">
+            <span id="btn-icon">⚡</span>
+            <span id="btn-text">Generate Safe Clause</span>
+          </button>
+          <button onclick="clearDraft()" class="p-4 border border-slate-200 rounded-2xl hover:bg-rose-50 hover:text-rose-600 hover:border-rose-200 transition-all text-slate-400 text-lg">🗑</button>
+        </div>
+      </div>
+
+      <div id="draft-output" class="hidden bg-slate-950 rounded-3xl p-8">
+        <div class="flex justify-between items-center mb-5">
+          <p class="text-[10px] font-black text-indigo-400 uppercase tracking-widest">Drafted Clause</p>
+          <button onclick="copyDraft()" class="text-slate-500 hover:text-white text-sm transition-colors flex items-center gap-1.5">📋 Copy</button>
+        </div>
+        <p id="draft-text" class="text-slate-100 font-mono text-sm leading-relaxed whitespace-pre-line border-l-2 border-indigo-600 pl-5 py-1"></p>
+      </div>
+    </div>
+
+  </div>
+</main>
+
+<script>
+  // ── Tab navigation ────────────────────────────────────────────────────────────
+
+  const titles = {
+    overview: 'Audit Summary', profile: 'Agreement Profile', clauses: 'Key Clauses',
+    risks: 'Risk Assessment', obligations: 'Obligations & Timeline', missing: 'Missing Protections',
+    recommendations: 'Recommendations', drafting: 'AI Drafting Room'
+  };
+
+  function switchTab(id) {
+    document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+    document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+    const content = document.getElementById('tab-' + id);
+    if (content) {
+      content.classList.add('active');
+      content.classList.remove('fade-in');
+      void content.offsetWidth;
+      content.classList.add('fade-in');
+    }
+    const btn = document.querySelector('[data-tab="' + id + '"]');
+    if (btn) btn.classList.add('active');
+    document.getElementById('page-title').textContent = titles[id] || id;
+  }
+
+  // ── Colour helpers ────────────────────────────────────────────────────────────
+
+  const CIRC = 2 * Math.PI * 28;
+
+  function verdictBg(rec) {
+    return rec === 'SIGN' ? 'bg-emerald-600' : rec === 'NEGOTIATE' ? 'bg-amber-500' : rec === 'ESCALATE' ? 'bg-orange-600' : 'bg-rose-600';
+  }
+  function verdictHex(rec) {
+    return rec === 'SIGN' ? '#059669' : rec === 'NEGOTIATE' ? '#d97706' : rec === 'ESCALATE' ? '#ea580c' : '#e11d48';
+  }
+  function scoreTw(score) {
+    return score >= 70 ? 'text-emerald-600' : score >= 50 ? 'text-amber-500' : 'text-rose-500';
+  }
+  function scoreHex(score) {
+    return score >= 70 ? '#059669' : score >= 50 ? '#d97706' : '#e11d48';
+  }
+  function gradeLabel(score) {
+    return score >= 90 ? 'Excellent' : score >= 80 ? 'Good' : score >= 70 ? 'Satisfactory'
+         : score >= 60 ? 'Fair' : score >= 50 ? 'Below Average' : score >= 35 ? 'Poor' : 'Critical Risk';
+  }
+  function sevColor(sev) {
+    const s = (sev||'').toUpperCase();
+    return s === 'HIGH' ? '#ef4444' : s === 'MEDIUM' ? '#f97316' : '#22c55e';
+  }
+  function sevBadge(sev) {
+    const s = (sev||'').toUpperCase();
+    return s === 'HIGH'
+      ? '<span class="bg-rose-100 text-rose-700 border border-rose-200 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider">🔴 HIGH RISK</span>'
+      : s === 'MEDIUM'
+      ? '<span class="bg-amber-100 text-amber-700 border border-amber-200 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider">🟡 MEDIUM RISK</span>'
+      : '<span class="bg-emerald-100 text-emerald-700 border border-emerald-200 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider">🟢 LOW RISK</span>';
+  }
+  function prioBadge(pri) {
+    const bg = pri === 'P0' ? 'bg-rose-100 text-rose-700 border border-rose-200' : pri === 'P1' ? 'bg-amber-100 text-amber-700 border border-amber-200' : 'bg-slate-100 text-slate-600 border border-slate-200';
+    return `<span class="${bg} px-3 py-1 rounded-full text-[10px] font-black uppercase inline-block mb-3">${pri} ${pri === 'P0' ? 'Critical' : pri === 'P1' ? 'High' : 'Medium'}</span>`;
+  }
+
+  // ── Gauge helpers ─────────────────────────────────────────────────────────────
+
+  function gaugePoint(score) {
+    const p = Math.max(0, Math.min(score, 100)) / 100;
+    const angle = p * Math.PI;
+    return { x: +(100 - 75 * Math.cos(angle)).toFixed(1), y: +(90 - 75 * Math.sin(angle)).toFixed(1) };
+  }
+
+  function updateGauge(score) {
+    const pt = gaugePoint(score);
+    const p = score / 100;
+    const laf = p > 0.5 ? 1 : 0;
+    const hex = scoreHex(score);
+    const fillEl = document.getElementById('gauge-fill');
+    fillEl.setAttribute('d', `M25,90 A75,75 0 ${laf},0 ${pt.x},${pt.y}`);
+    fillEl.setAttribute('stroke', hex);
+    document.getElementById('gauge-needle').setAttribute('x2', pt.x);
+    document.getElementById('gauge-needle').setAttribute('y2', pt.y);
+  }
+
+  // ── Donut helpers ─────────────────────────────────────────────────────────────
+
+  function updateDonut(h, m, l) {
+    const total = h + m + l || 1;
+    let offset = 0;
+    [[h, 'donut-high'], [m, 'donut-med'], [l, 'donut-low']].forEach(([count, id]) => {
+      const len = (count / total) * CIRC;
+      const el = document.getElementById(id);
+      el.setAttribute('stroke-dasharray', len.toFixed(2) + ' ' + (CIRC - len).toFixed(2));
+      el.setAttribute('stroke-dashoffset', (-offset).toFixed(2));
+      offset += len;
+    });
+    document.getElementById('donut-legend').innerHTML =
+      `<span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-rose-500 inline-block"></span>${h} High</span>
+       <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-orange-500 inline-block"></span>${m} Med</span>
+       <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-emerald-500 inline-block"></span>${l} Low</span>`;
+  }
+
+  // ── initPage ──────────────────────────────────────────────────────────────────
+
+  function initPage(data) {
+    const { sessionId, score, grade, recommendation, filename, summary, results } = data;
+    const clauses    = (results.clauses && Array.isArray(results.clauses.clauses)) ? results.clauses.clauses : [];
+    const meta       = (results.clauses && results.clauses.metadata) || {};
+    const missing    = (results.clauses && Array.isArray(results.clauses.missingProtections)) ? results.clauses.missingProtections : [];
+    const risks      = (results.risks && Array.isArray(results.risks.risks)) ? results.risks.risks : [];
+    const obligations = (results.terms && Array.isArray(results.terms.obligations)) ? results.terms.obligations : [];
+    const recos      = (results.recommendations && Array.isArray(results.recommendations.recommendations)) ? results.recommendations.recommendations : [];
+
+    const rc = risks.reduce((a, r) => {
+      const s = (r.severity||'').toUpperCase();
+      if (s==='HIGH') a.h++; else if (s==='MEDIUM') a.m++; else a.l++;
+      return a;
+    }, { h: 0, m: 0, l: 0 });
+
+    const verdictLabel = recommendation === 'SIGN' ? 'SIGN' : recommendation === 'NEGOTIATE' ? 'NEGOTIATE' : recommendation === 'ESCALATE' ? 'ESCALATE' : 'DO NOT SIGN';
+    const verdictSub = recommendation === 'SIGN' ? 'This agreement is acceptable to execute.' : recommendation === 'NEGOTIATE' ? 'Negotiate key clauses before signing.' : recommendation === 'ESCALATE' ? 'Escalate to senior counsel before proceeding.' : 'Significant renegotiation required before execution.';
+
+    // ── Sidebar
+    const svc = document.getElementById('sidebar-verdict-card');
+    svc.className = svc.className.replace(/bg-\w+-600/, '').replace(/bg-\w+-500/, '') + ' ' + verdictBg(recommendation);
+    document.getElementById('sidebar-verdict-text').textContent = recommendation;
+    document.getElementById('sidebar-verdict-bar').style.width = score + '%';
+    document.getElementById('sidebar-verdict-score').textContent = 'Score: ' + score + ' / 100';
+
+    // ── Header
+    document.getElementById('doc-ref-text').textContent = filename || 'Contract';
+    document.getElementById('download-btn').href = '/api/download/' + sessionId;
+
+    // ── Overview: donut + grade + score
+    updateDonut(rc.h, rc.m, rc.l);
+    const ovGrade = document.getElementById('ov-grade');
+    ovGrade.textContent = grade;
+    ovGrade.className = ovGrade.className.replace(/text-\w+-\d+/, scoreTw(score));
+    document.getElementById('ov-grade-label').textContent = gradeLabel(score);
+    const ovScore = document.getElementById('ov-score');
+    ovScore.textContent = score;
+    ovScore.parentElement.className = ovScore.parentElement.className.replace(/text-\w+-\d+/, scoreTw(score));
+    document.getElementById('ov-missing').textContent = missing.length;
+    document.getElementById('ov-summary').textContent = summary || 'Analysis complete. Review sections below.';
+
+    const ovBadge = document.getElementById('ov-verdict-badge');
+    ovBadge.textContent = recommendation === 'SIGN' ? 'SIGN' : recommendation === 'NEGOTIATE' ? 'NEGOTIATE' : recommendation === 'ESCALATE' ? 'ESCALATE' : 'DO NOT SIGN';
+    if (recommendation === 'SIGN') ovBadge.className = 'bg-emerald-50 text-emerald-700 px-4 py-2 rounded-xl font-black text-xs uppercase tracking-wider shrink-0 ml-4 border border-emerald-100';
+    else if (recommendation === 'NEGOTIATE') ovBadge.className = 'bg-amber-50 text-amber-700 px-4 py-2 rounded-xl font-black text-xs uppercase tracking-wider shrink-0 ml-4 border border-amber-100';
+    else ovBadge.className = 'bg-rose-50 text-rose-600 px-4 py-2 rounded-xl font-black text-xs uppercase tracking-wider shrink-0 ml-4 border border-rose-100';
+
+    // ── Overview: meta stats
+    const metaFields = [
+      ['Contract Type', meta.contractType],
+      ['Total Value', meta.totalValue],
+      ['Term', meta.term],
+      ['Governing Law', meta.governingLaw],
+    ].filter(f => f[1]);
+    document.getElementById('ov-meta-stats').innerHTML = metaFields.map(f =>
+      `<div><p class="text-[10px] font-black text-slate-400 uppercase">${f[0]}</p><p class="font-black text-lg">${f[1]}</p></div>`
+    ).join('');
+
+    // ── Overview: urgent banner (top HIGH risk)
+    const topHigh = risks.find(r => (r.severity||'').toUpperCase() === 'HIGH');
+    if (topHigh) {
+      document.getElementById('overview-banner').innerHTML = `
+        <div class="bg-indigo-900 rounded-3xl p-8 text-white shadow-xl">
+          <div class="grid grid-cols-2 gap-10 items-center">
+            <div>
+              <h3 class="text-xl font-black mb-3 leading-tight">⚠ Critical: ${topHigh.risk || 'High Risk Identified'}</h3>
+              <p class="text-indigo-200 text-sm leading-relaxed opacity-90 mb-4">${topHigh.explanation || topHigh.risk || ''}</p>
+              <button onclick="switchTab('recommendations')" class="bg-white text-indigo-900 px-5 py-2.5 rounded-xl font-bold text-sm hover:opacity-90 transition-opacity">View Recommendations →</button>
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+              <div class="bg-white/10 backdrop-blur p-4 rounded-2xl border border-white/10"><p class="text-[10px] uppercase font-black mb-1 opacity-60">High Risks</p><p class="text-3xl font-black text-rose-400">${String(rc.h).padStart(2,'0')}</p></div>
+              <div class="bg-white/10 backdrop-blur p-4 rounded-2xl border border-white/10"><p class="text-[10px] uppercase font-black mb-1 opacity-60">Medium Risks</p><p class="text-3xl font-black text-amber-400">${String(rc.m).padStart(2,'0')}</p></div>
+              <div class="bg-white/10 backdrop-blur p-4 rounded-2xl border border-white/10"><p class="text-[10px] uppercase font-black mb-1 opacity-60">Missing</p><p class="text-3xl font-black text-slate-300">${String(missing.length).padStart(2,'0')}</p></div>
+              <div class="bg-white/10 backdrop-blur p-4 rounded-2xl border border-white/10"><p class="text-[10px] uppercase font-black mb-1 opacity-60">Contract Type</p><p class="text-sm font-black text-white leading-tight">${meta.contractType || '—'}</p></div>
+            </div>
+          </div>
+        </div>`;
+    }
+
+    // ── Profile tab
+    document.getElementById('prof-verdict-card').style.background = verdictHex(recommendation);
+    document.getElementById('prof-verdict-text').textContent = verdictLabel;
+    document.getElementById('prof-verdict-sub').textContent = verdictSub;
+    document.getElementById('prof-grade-big').textContent = grade;
+    document.getElementById('prof-score-num').textContent = score;
+    document.getElementById('prof-score-num').className = scoreTw(score) + ' text-2xl font-black';
+    document.getElementById('prof-grade-label').textContent = gradeLabel(score);
+    updateGauge(score);
+
+    const parties = (meta.parties || '').split(/[,&]|and\s/i).map(p => p.trim()).filter(Boolean);
+    document.getElementById('prof-party-a').textContent = parties[0] || meta.parties || '—';
+    document.getElementById('prof-party-b').textContent = parties[1] || '—';
+
+    const legalFields = [
+      ['Agreement Type', meta.contractType],
+      ['Governing Law', meta.governingLaw],
+      ['Effective Date', meta.effectiveDate],
+      ['Term', meta.term],
+      ['Total Value', meta.totalValue],
+    ].filter(f => f[1]);
+    document.getElementById('prof-legal-standing').innerHTML = legalFields.map(f =>
+      `<div class="flex justify-between border-b border-indigo-100 pb-2.5">
+        <span class="text-xs font-bold text-slate-500 uppercase">${f[0]}</span>
+        <span class="text-xs font-black text-indigo-900 text-right max-w-[55%]">${f[1]}</span>
+      </div>`
+    ).join('') || '<p class="text-xs text-slate-400">No metadata available.</p>';
+
+    const finFields = [
+      ['Contract Type', meta.contractType, 'slate'],
+      ['Effective Date', meta.effectiveDate, 'slate'],
+      ['Term', meta.term, 'slate'],
+      ['Total Value', meta.totalValue, 'indigo'],
+    ].filter(f => f[1]);
+    document.getElementById('prof-financial').innerHTML = finFields.map(f =>
+      `<div class="bg-${f[2]}-50 rounded-2xl p-4 border border-${f[2]}-100 text-center">
+        <p class="text-[10px] font-black text-${f[2]}-400 uppercase mb-1">${f[0]}</p>
+        <p class="text-lg font-black text-${f[2]}-900 leading-tight">${f[1]}</p>
+      </div>`
+    ).join('') || '<p class="text-xs text-slate-400 col-span-4">No financial data available.</p>';
+
+    // Profile: key obligations as dates grid
+    const icons = ['📋','💰','🔒','📆','⏳','💵','📝','⚡'];
+    document.getElementById('prof-dates-grid').innerHTML = obligations.slice(0, 6).map((o, i) =>
+      `<div class="flex items-center gap-4 p-4 bg-slate-50 rounded-2xl border border-slate-100">
+        <span class="text-2xl">${icons[i % icons.length]}</span>
+        <div>
+          <p class="text-[10px] font-black text-slate-500 uppercase">${o.obligation || '—'}</p>
+          <p class="font-black text-slate-800 text-sm">${o.deadline || '—'}</p>
+          ${o.consequence ? `<p class="text-[9px] text-rose-500 font-bold">${o.consequence}</p>` : ''}
+        </div>
+      </div>`
+    ).join('') || '<p class="text-xs text-slate-400 col-span-2">No obligations data available.</p>';
+
+    // Profile: advocate notes from HIGH/MEDIUM risks
+    const noteRisks = risks.filter(r => ['HIGH','MEDIUM'].includes((r.severity||'').toUpperCase())).slice(0, 4);
+    if (noteRisks.length > 0) {
+      document.getElementById('prof-notes-card').classList.remove('hidden');
+      document.getElementById('prof-notes').innerHTML = noteRisks.map(r =>
+        `<li class="flex gap-2"><span class="font-black mt-0.5">→</span> ${r.explanation || r.risk || ''}</li>`
+      ).join('');
+    }
+
+    // ── Key Clauses tab (rendered from risks, sorted HIGH first)
+    const sortedRisks = [...risks].sort((a, b) => {
+      const ord = { HIGH: 0, MEDIUM: 1, LOW: 2 };
+      return (ord[(a.severity||'').toUpperCase()] ?? 3) - (ord[(b.severity||'').toUpperCase()] ?? 3);
+    });
+    const borderCol = sev => sev === 'HIGH' ? 'border-rose-500' : sev === 'MEDIUM' ? 'border-amber-400' : 'border-emerald-400';
+    const bgCol = sev => sev === 'HIGH' ? 'bg-rose-50 border-rose-100' : sev === 'MEDIUM' ? 'bg-amber-50 border-amber-100' : 'bg-emerald-50 border-emerald-100';
+    document.getElementById('clauses-list').innerHTML = sortedRisks.length > 0 ? sortedRisks.map(r => {
+      const s = (r.severity||'').toUpperCase();
+      return `<div class="bg-white rounded-3xl p-7 border-l-4 ${borderCol(s)} border-t border-r border-b border-slate-100 shadow-sm">
+        <div class="flex justify-between items-center mb-3">
+          <h4 class="font-black text-lg text-slate-800">${r.risk || '—'} ${r.clauseRef ? `<span class="text-slate-300 font-normal text-sm">(${r.clauseRef})</span>` : ''}</h4>
+          ${sevBadge(s)}
+        </div>
+        <p class="text-slate-600 font-medium leading-relaxed ${bgCol(s)} p-4 rounded-2xl border italic text-sm mb-3">"${r.explanation || '—'}"</p>
+        ${r.clauseRef ? `<p class="text-xs text-slate-500"><span class="font-black text-slate-700">Reference:</span> ${r.clauseRef}</p>` : ''}
+      </div>`;
+    }).join('') : '<p class="text-slate-400 text-sm">No clause data available.</p>';
+
+    // ── Risk Assessment tab
+    const totalPenalty = 100 - score;
+    const perRisk = risks.length > 0 ? Math.round(totalPenalty / risks.length) : 0;
+    document.getElementById('risk-impact-section').innerHTML = `
+      <div class="flex justify-between items-center mb-5">
+        <div>
+          <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Score Impact Analysis</p>
+          <p class="text-xs text-slate-500">How each risk contributes to the overall score</p>
+        </div>
+        <div class="text-right">
+          <p class="text-[10px] font-black text-slate-400 uppercase">Final Score</p>
+          <p class="text-2xl font-black ${scoreTw(score)}">${score}<span class="text-sm text-slate-400 font-normal">/100</span></p>
+        </div>
+      </div>
+      <div class="space-y-3">
+        ${sortedRisks.map(r => {
+          const s = (r.severity||'').toUpperCase();
+          const pts = s === 'HIGH' ? Math.round(perRisk * 1.8) : s === 'MEDIUM' ? Math.round(perRisk * 0.9) : Math.round(perRisk * 0.4);
+          const w = Math.min(Math.round((pts / 100) * 100), 95);
+          const barCol = s === 'HIGH' ? 'bg-rose-500' : s === 'MEDIUM' ? 'bg-amber-400' : 'bg-emerald-400';
+          const lblCol = s === 'HIGH' ? 'text-rose-500' : s === 'MEDIUM' ? 'text-amber-500' : 'text-emerald-500';
+          return `<div class="flex items-center gap-3">
+            <span class="text-xs font-bold text-slate-600 w-44 shrink-0 truncate">${r.risk || '—'}</span>
+            <div class="flex-1 bg-slate-100 rounded-full h-5 overflow-hidden">
+              <div class="${barCol} h-full rounded-full flex items-center justify-end pr-2" style="width:${w}%">
+                <span class="text-[9px] font-black text-white">-${pts} pts</span>
+              </div>
+            </div>
+            <span class="text-[10px] font-black ${lblCol} w-8 text-right shrink-0">${s.slice(0,4)}</span>
+          </div>`;
+        }).join('')}
+        <div class="flex items-center gap-3 pt-1 border-t border-slate-100">
+          <span class="text-xs font-bold text-slate-400 w-44 shrink-0">Remaining Score</span>
+          <div class="flex-1 bg-slate-100 rounded-full h-5 overflow-hidden">
+            <div class="bg-indigo-200 h-full rounded-full flex items-center justify-end pr-2" style="width:${score}%">
+              <span class="text-[9px] font-black text-indigo-700">${score} pts</span>
+            </div>
+          </div>
+          <span class="text-[10px] font-black text-slate-400 w-8"></span>
+        </div>
+      </div>`;
+
+    // HIGH risk cards
+    const highRisks = sortedRisks.filter(r => (r.severity||'').toUpperCase() === 'HIGH');
+    document.getElementById('risk-high-cards').innerHTML = highRisks.length > 0
+      ? `<div><p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Critical Risks</p></div>` +
+        highRisks.map(r => `
+          <div class="bg-white rounded-3xl p-7 border border-slate-100 shadow-sm flex gap-6 items-start hover:border-rose-200 transition-colors">
+            <div class="w-11 h-11 rounded-2xl bg-rose-100 text-rose-600 flex items-center justify-center text-xl shrink-0">⚠</div>
+            <div class="flex-1">
+              <div class="flex justify-between items-center mb-2">
+                <h4 class="text-lg font-black text-slate-900">${r.risk || '—'}</h4>
+                <span class="bg-rose-100 text-rose-700 border border-rose-200 px-2 py-0.5 rounded text-[10px] font-black uppercase">HIGH</span>
+              </div>
+              <p class="text-slate-600 font-medium text-sm mb-4 leading-relaxed">${r.explanation || '—'}</p>
+              ${r.clauseRef ? `<div class="bg-slate-50 p-4 rounded-2xl"><p class="text-[10px] font-black text-slate-400 uppercase mb-1">Clause Reference</p><p class="text-sm font-bold text-indigo-600">${r.clauseRef}</p></div>` : ''}
+            </div>
+          </div>`).join('')
+      : '';
+
+    // Other risks table
+    const otherRisks = sortedRisks.filter(r => (r.severity||'').toUpperCase() !== 'HIGH');
+    if (otherRisks.length > 0) {
+      document.getElementById('risk-other-section').innerHTML = `
+        <div>
+          <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Other Risks</p>
+          <div class="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden">
+            <table class="w-full text-left">
+              <thead class="bg-slate-50 border-b border-slate-100">
+                <tr>
+                  <th class="px-6 py-4 text-[10px] font-black uppercase text-slate-400 tracking-widest">Risk</th>
+                  <th class="px-6 py-4 text-[10px] font-black uppercase text-slate-400 tracking-widest">Clause</th>
+                  <th class="px-6 py-4 text-[10px] font-black uppercase text-slate-400 tracking-widest">Severity</th>
+                  <th class="px-6 py-4 text-[10px] font-black uppercase text-slate-400 tracking-widest">Explanation</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${otherRisks.map((r, i) => {
+                  const s = (r.severity||'').toUpperCase();
+                  const bg = i % 2 === 0 ? '' : 'bg-slate-50/50';
+                  const badgeCl = s === 'MEDIUM' ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700';
+                  return `<tr class="${bg} hover:bg-slate-50 transition-colors">
+                    <td class="px-6 py-4 font-bold text-slate-800 text-sm">${r.risk || '—'}</td>
+                    <td class="px-6 py-4 text-sm text-indigo-600 font-semibold">${r.clauseRef || '—'}</td>
+                    <td class="px-6 py-4"><span class="${badgeCl} px-2 py-0.5 rounded text-[10px] font-black uppercase">${s}</span></td>
+                    <td class="px-6 py-4 text-sm text-slate-600">${(r.explanation||'').slice(0,80)}${(r.explanation||'').length>80?'…':''}</td>
+                  </tr>`;
+                }).join('')}
+              </tbody>
+            </table>
+          </div>
+        </div>`;
+    }
+
+    // ── Obligations tab
+    if (obligations.length > 0) {
+      const timelineIcons = ['📋','💰','🔒','⚡','📆','💵','📝','⏳'];
+      document.getElementById('oblig-timeline').innerHTML = `
+        <div class="absolute top-4 left-4 right-4 h-0.5 bg-gradient-to-r from-indigo-500 via-slate-300 to-amber-400 z-0"></div>
+        <div class="relative z-10 flex justify-between flex-wrap gap-4">
+          ${obligations.slice(0, 6).map((o, i) => `
+            <div class="flex flex-col items-center gap-2" style="max-width:90px">
+              <div class="timeline-dot bg-indigo-100 text-indigo-700 border-2 border-indigo-200 flex items-center justify-center">${timelineIcons[i % timelineIcons.length]}</div>
+              <p class="text-[10px] font-black text-indigo-700 uppercase text-center leading-tight">${(o.obligation||'').slice(0,20)}</p>
+              <p class="text-[10px] font-bold text-slate-500 text-center">${o.deadline || '—'}</p>
+            </div>`).join('')}
+        </div>`;
+
+      document.getElementById('oblig-table').innerHTML = `
+        <table class="w-full text-left">
+          <thead>
+            <tr class="border-b border-slate-100">
+              <th class="px-7 py-4 text-[10px] font-black uppercase text-slate-400 tracking-widest">Party</th>
+              <th class="px-7 py-4 text-[10px] font-black uppercase text-slate-400 tracking-widest">Responsibility</th>
+              <th class="px-7 py-4 text-[10px] font-black uppercase text-slate-400 tracking-widest">Due Date</th>
+              <th class="px-7 py-4 text-[10px] font-black uppercase text-slate-400 tracking-widest">If Breached</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-50">
+            ${obligations.map(o =>
+              `<tr class="hover:bg-slate-50/50 transition-colors">
+                <td class="px-7 py-4"><span class="bg-indigo-50 text-indigo-700 px-2 py-1 rounded text-[10px] font-black">${o.party || '—'}</span></td>
+                <td class="px-7 py-4 font-bold text-slate-800 text-sm">${o.obligation || '—'}</td>
+                <td class="px-7 py-4 text-sm font-bold text-slate-700">${o.deadline || '—'}</td>
+                <td class="px-7 py-4 text-xs font-black text-rose-500 uppercase">${o.consequence || '—'}</td>
+              </tr>`
+            ).join('')}
+          </tbody>
+        </table>`;
+    } else {
+      document.getElementById('oblig-timeline').innerHTML = '<p class="text-sm text-slate-400">No obligations data available.</p>';
+      document.getElementById('oblig-table').innerHTML = '<p class="px-7 py-5 text-sm text-slate-400">No obligations data available.</p>';
+    }
+
+    // ── Missing Protections tab
+    const missingIcons = ['🔒','⚖','🛡','📊','🔐','📋','⚡','🏛'];
+    document.getElementById('missing-grid').innerHTML = missing.length > 0
+      ? missing.map((m, i) =>
+          `<div class="bg-white rounded-3xl p-6 border border-slate-100 shadow-sm flex items-center gap-4 hover:border-indigo-300 transition-colors group ${i === missing.length - 1 && missing.length % 2 !== 0 ? 'col-span-2' : ''}">
+            <div class="w-10 h-10 rounded-full bg-slate-100 group-hover:bg-indigo-50 flex items-center justify-center text-slate-400 group-hover:text-indigo-500 transition-colors shrink-0">${missingIcons[i % missingIcons.length]}</div>
+            <div><p class="font-bold text-slate-700">${m}</p></div>
+          </div>`
+        ).join('')
+      : '<p class="text-slate-400 text-sm col-span-2">No missing protections identified.</p>';
+
+    // ── Recommendations tab
+    const p0 = recos.filter(r => r.priority === 'P0').length;
+    const p1 = recos.filter(r => r.priority === 'P1').length;
+    const afterP0  = Math.min(score + p0 * 15, 95);
+    const afterP1  = Math.min(afterP0 + p1 * 8, 98);
+    const afterAll = Math.min(afterP1 + (recos.length - p0 - p1) * 3, 99);
+    const barRow = (label, s, color, grade) =>
+      `<div class="flex items-center gap-4">
+        <span class="text-xs font-black text-slate-500 w-32 shrink-0">${label}</span>
+        <div class="flex-1 bg-slate-100 rounded-full h-7 overflow-hidden relative">
+          <div class="${color} h-full rounded-full flex items-center px-3" style="width:${s}%">
+            <span class="text-xs font-black text-white whitespace-nowrap">${s} / 100</span>
+          </div>
+        </div>
+        <span class="text-sm font-black text-slate-500 w-6 shrink-0">${grade}</span>
+      </div>`;
+    document.getElementById('reco-projection').innerHTML = `
+      <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-5">Score Projection — If Fixes Applied</p>
+      <div class="space-y-4">
+        ${barRow('Current Score', score, 'bg-rose-500', grade)}
+        ${p0 > 0 ? barRow('After P0 Fixes', afterP0, 'bg-amber-400', afterP0 >= 70 ? 'B' : afterP0 >= 50 ? 'D+' : 'F') : ''}
+        ${p1 > 0 ? barRow('After P1 Fixes', afterP1, 'bg-amber-500', afterP1 >= 70 ? 'B+' : 'C+') : ''}
+        ${recos.length > 0 ? barRow('All Fixes Applied', afterAll, 'bg-emerald-500', afterAll >= 80 ? 'B+' : 'B') : ''}
+      </div>
+      <p class="text-[10px] text-slate-400 mt-4 italic">* Projected scores are estimates. Actual score requires re-analysis.</p>`;
+
+    document.getElementById('reco-cards').innerHTML = recos.length > 0
+      ? recos.map((r, i) =>
+          `<div class="bg-white rounded-3xl p-7 border border-slate-100 shadow-sm relative overflow-hidden">
+            <span class="absolute top-4 right-5 text-5xl font-black text-slate-50 select-none">#${i+1}</span>
+            ${prioBadge(r.priority)}
+            <h4 class="text-base font-bold text-slate-800 leading-snug">${r.recommendation || r.action || '—'}</h4>
+          </div>`
+        ).join('')
+      : '<p class="text-slate-400 text-sm col-span-2">No recommendations available.</p>';
+
+    // ── Hide loading overlay
+    document.getElementById('loading-overlay').style.display = 'none';
+  }
+
+  // ── Load data from API ────────────────────────────────────────────────────────
+
+  (async function load() {
+    const params = new URLSearchParams(window.location.search);
+    const sessionId = params.get('sessionId');
+    if (!sessionId) {
+      document.getElementById('loading-overlay').innerHTML =
+        '<p class="text-rose-600 font-bold text-sm">No session ID found. Please <a href="/dashboard.html" class="underline">run an analysis first</a>.</p>';
+      return;
+    }
+    try {
+      const res = await fetch('/api/results/' + sessionId);
+      if (!res.ok) throw new Error('Session not found');
+      const data = await res.json();
+      initPage(data);
+    } catch (err) {
+      document.getElementById('loading-overlay').innerHTML =
+        '<p class="text-rose-600 font-bold text-sm">Failed to load results. <a href="/dashboard.html" class="underline">Run a new analysis</a>.</p>';
+    }
+  })();
+
+  // ── AI Drafting Room ──────────────────────────────────────────────────────────
+
+  let _sessionId = null;
+  (function captureSession() {
+    _sessionId = new URLSearchParams(window.location.search).get('sessionId');
+  })();
+
+  function selectPreset(btn, text) {
+    document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('preset-active'));
+    btn.classList.add('preset-active');
+    document.getElementById('draft-prompt').value = text;
+  }
+
+  async function generateClause() {
+    const prompt = document.getElementById('draft-prompt').value.trim();
+    if (!prompt) { document.getElementById('draft-prompt').focus(); return; }
+    const btn = document.getElementById('generate-btn');
+    const icon = document.getElementById('btn-icon');
+    const label = document.getElementById('btn-text');
+    btn.disabled = true; icon.textContent = '⏳'; label.textContent = 'Drafting with Claude AI…';
+
+    try {
+      const res = await fetch('/api/draft', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt, sessionId: _sessionId }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Drafting failed');
+      document.getElementById('draft-text').textContent = data.clause;
+      document.getElementById('draft-output').classList.remove('hidden');
+    } catch (err) {
+      alert('Error: ' + err.message);
+    } finally {
+      btn.disabled = false; icon.textContent = '⚡'; label.textContent = 'Generate Safe Clause';
+    }
+  }
+
+  function clearDraft() {
+    document.getElementById('draft-prompt').value = '';
+    document.getElementById('draft-output').classList.add('hidden');
+    document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('preset-active'));
+  }
+
+  function copyDraft() {
+    const text = document.getElementById('draft-text').textContent;
+    navigator.clipboard.writeText(text).then(() => {
+      const btn = event.target;
+      btn.textContent = '✅ Copied!';
+      setTimeout(() => btn.textContent = '📋 Copy', 2000);
+    });
+  }
+</script>
+</body>
+</html>
