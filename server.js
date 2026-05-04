@@ -467,6 +467,68 @@ app.get('/api/download/:sessionId', function(req, res) {
     doc.y = y + 8;
   }
 
+  // Risk Assessment table — severity-tinted rows with left stripe, no badge column
+  function drawRiskTable(risks) {
+    var TINTS   = { HIGH: '#FEF2F2', MEDIUM: '#FFFBEB', LOW: '#F0FDF4' };
+    var STRIPES = { HIGH: RED, MEDIUM: AMBER, LOW: GREEN };
+    var headers = ['Risk', 'Clause', 'Action'];
+    var cols    = [255, 60, W - 315];
+    var RH = 22, FS = 8, PAD = 5;
+    var y = doc.y;
+
+    function riskHdr(atY) {
+      doc.rect(50, atY, W, RH).fill(SLATE);
+      var x = 50;
+      headers.forEach(function(h, i) {
+        doc.fontSize(FS).fillColor(WHITE).font('Helvetica-Bold')
+          .text(h, x + PAD, atY + 7, { width: cols[i] - PAD * 2, lineBreak: false });
+        x += cols[i];
+      });
+    }
+    riskHdr(y);
+    y += RH;
+
+    risks.forEach(function(r) {
+      var sev    = (r.severity || '').toUpperCase();
+      var bg     = TINTS[sev]   || ALTROW;
+      var stripe = STRIPES[sev] || GREY;
+      var risk   = (r.risk || r.description || '--').replace(/\*\*/g, '');
+      var action = (r.explanation || r.risk || '--').replace(/\*\*/g, '');
+      var cells  = [
+        risk.length   > 80 ? risk.slice(0, 77)   + '…' : risk,
+        r.clauseRef || '--',
+        action.length > 40 ? action.slice(0, 37) + '…' : action
+      ];
+
+      var lineCount = Math.max(1, Math.ceil(cells[0].length / 36));
+      var cellH = Math.max(RH, lineCount * 10 + PAD * 2);
+
+      if (y + cellH > CBOT) {
+        doc.addPage();
+        y = CTOP;
+        riskHdr(y);
+        y += RH;
+      }
+
+      doc.rect(50, y, W, cellH).fill(bg);
+      doc.rect(50, y, 4, cellH).fill(stripe);
+
+      var x = 50;
+      cells.forEach(function(cell, ci) {
+        doc.fontSize(FS).fillColor(SLATE).font('Helvetica')
+          .text(cell, x + (ci === 0 ? 8 : PAD), y + PAD, {
+            width:     cols[ci] - (ci === 0 ? 12 : PAD * 2),
+            lineBreak: true,
+            height:    cellH - PAD,
+            ellipsis:  true
+          });
+        x += cols[ci];
+      });
+      y += cellH;
+    });
+    doc.y = y + 8;
+  }
+
   // ── Cover ──────────────────────────────────────────────────────────────────
   doc.addPage();
   var sc = score >= 70 ? GREEN : score >= 50 ? AMBER : RED;
@@ -485,19 +547,53 @@ app.get('/api/download/:sessionId', function(req, res) {
   // Score panel — horizontal card replacing the isolated circle
   var panelY = 208, panelH = 124;
   doc.roundedRect(50, panelY, W, panelH, 5).fill(LIGHTBG);
-  // Left: large score number
-  doc.fontSize(54).fillColor(sc).font('Helvetica-Bold')
-    .text(String(score), 62, panelY + 16, { width: 104, align: 'center', lineBreak: false });
-  doc.fontSize(8).fillColor(GREY).font('Helvetica')
-    .text('/ 100', 62, panelY + 84, { width: 104, align: 'center', lineBreak: false });
+  // ── Left zone: semicircle gauge ──────────────────────────────────────────
+  var gCx = 114, gCy = panelY + 78, gR = 44;
+  // Track (full top semicircle, clockwise from left to right through top)
+  doc.save();
+  doc.lineWidth(11).lineCap('round');
+  doc.arc(gCx, gCy, gR, Math.PI, 2 * Math.PI, false)
+     .strokeColor('#E5E7EB').stroke();
+  // Filled arc proportional to score
+  if (score > 0) {
+    doc.arc(gCx, gCy, gR, Math.PI, Math.PI + (score / 100) * Math.PI, false)
+       .strokeColor(sc).stroke();
+  }
+  doc.restore();
+  // Score text — below arc centre, no overlap with stroke
+  doc.fontSize(22).fillColor(sc).font('Helvetica-Bold')
+    .text(String(score), 62, gCy + 6, { width: 104, align: 'center', lineBreak: false });
+  doc.fontSize(7).fillColor(GREY).font('Helvetica')
+    .text('/ 100  ·  Grade ' + grade, 62, gCy + 30, { width: 104, align: 'center', lineBreak: false });
+
   // Centre separator
   doc.moveTo(192, panelY + 16).lineTo(192, panelY + panelH - 16).lineWidth(0.5).strokeColor(GREY).stroke();
-  // Grade letter + label
+
+  // ── Centre zone: pie chart (risk distribution) ───────────────────────────
+  var pieCx = 243, pieCy = panelY + 56, pieR = 28;
+  var pieTotal = riskCounts.h + riskCounts.m + riskCounts.l || 1;
+  var gapRad = 3 * Math.PI / 180;
+  var pieStart = -Math.PI / 2; // start at 12 o'clock
+  [[riskCounts.h, RED], [riskCounts.m, AMBER], [riskCounts.l, GREEN]].forEach(function(seg) {
+    if (seg[0] === 0) return;
+    var sweep = (seg[0] / pieTotal) * 2 * Math.PI - gapRad;
+    doc.save();
+    doc.moveTo(pieCx, pieCy);
+    doc.arc(pieCx, pieCy, pieR, pieStart, pieStart + sweep, false);
+    doc.closePath();
+    doc.fill(seg[1]);
+    doc.restore();
+    pieStart += sweep + gapRad;
+  });
+  // Pie legend
+  var legY = pieCy + pieR + 8;
   var gradeLabel = score >= 90 ? 'Excellent' : score >= 80 ? 'Good' : score >= 70 ? 'Satisfactory' : score >= 60 ? 'Fair' : score >= 50 ? 'Below Average' : score >= 35 ? 'Poor' : 'Critical Risk';
-  doc.fontSize(40).fillColor(sc).font('Helvetica-Bold')
-    .text(grade, 202, panelY + 18, { width: 82, align: 'center', lineBreak: false });
-  doc.fontSize(8).fillColor(GREY).font('Helvetica')
-    .text(gradeLabel, 202, panelY + 80, { width: 82, align: 'center', lineBreak: false });
+  [[riskCounts.h, RED, 'High'], [riskCounts.m, AMBER, 'Med'], [riskCounts.l, GREEN, 'Low']].forEach(function(leg, i) {
+    var ly = legY + i * 10;
+    doc.roundedRect(202, ly + 1, 7, 7, 1).fill(leg[1]);
+    doc.fontSize(7).fillColor(GREY).font('Helvetica')
+      .text(leg[0] + ' ' + leg[2], 212, ly, { width: 72, lineBreak: false });
+  });
   // Right: verdict badge
   doc.roundedRect(308, panelY + 20, 220, 84, 4).fill(recC);
   doc.fontSize(9).fillColor(WHITE).font('Helvetica')
@@ -548,43 +644,79 @@ app.get('/api/download/:sessionId', function(req, res) {
 
   // ── Executive Summary ──────────────────────────────────────────────────────
   secHdr('Executive Summary');
-  doc.fontSize(10.5).fillColor(SLATE).font('Helvetica')
-    .text(summaryText, 50, doc.y, { width: W, align: 'justify', lineGap: 3 });
 
-  // Risk count boxes
-  var bY = doc.y + 24, bW = 150, bH = 58;
-  if (bY + bH < CBOT) {
-    var boxes = [[String(riskCounts.h), 'HIGH RISK', RED], [String(riskCounts.m), 'MEDIUM RISK', AMBER], [String(riskCounts.l), 'LOW RISK', GREEN]];
-    for (var bi = 0; bi < boxes.length; bi++) {
-      var bx = 50 + bi * (bW + 12);
-      doc.roundedRect(bx, bY, bW, bH, 4).fill(boxes[bi][2]);
-      doc.fontSize(26).fillColor(WHITE).font('Helvetica-Bold').text(boxes[bi][0], bx, bY + 6, { width: bW, align: 'center' });
-      doc.fontSize(8).fillColor(WHITE).font('Helvetica').text(boxes[bi][1], bx, bY + 36, { width: bW, align: 'center' });
-    }
-    doc.y = bY + bH + 20;
+  var sumLeftW  = Math.floor(W * 0.58);  // 287
+  var sumRightW = Math.floor(W * 0.38);  // 188
+  var sumGap    = W - sumLeftW - sumRightW; // 20
+  var sumRightX = 50 + sumLeftW + sumGap;   // 357
+  var sumStartY = doc.y;
+
+  // ── LEFT COLUMN ────────────────────────────────────────────────────────────
+  // Shortened prose (word-boundary truncation at 200 chars)
+  var shortSummary = summaryText.length > 200
+    ? summaryText.slice(0, 200).replace(/\s+\S*$/, '') + '…'
+    : summaryText;
+  doc.fontSize(10).fillColor(SLATE).font('Helvetica')
+    .text(shortSummary, 50, sumStartY, { width: sumLeftW, align: 'justify', lineGap: 2 });
+
+  // Risk count pills (below prose)
+  var pillY = doc.y + 10;
+  var pillW = Math.floor((sumLeftW - 10) / 3);
+  var pillH = 40;
+  if (pillY + pillH < CBOT) {
+    [[String(riskCounts.h), 'HIGH', RED], [String(riskCounts.m), 'MED', AMBER], [String(riskCounts.l), 'LOW', GREEN]]
+      .forEach(function(p, i) {
+        var px = 50 + i * (pillW + 5);
+        doc.roundedRect(px, pillY, pillW, pillH, 3).fill(p[2]);
+        doc.fontSize(18).fillColor(WHITE).font('Helvetica-Bold').text(p[0], px, pillY + 4, { width: pillW, align: 'center' });
+        doc.fontSize(7).fillColor(WHITE).font('Helvetica').text(p[1], px, pillY + 26, { width: pillW, align: 'center' });
+      });
+    doc.y = pillY + pillH + 10;
   }
 
-  // Top risks inline — fills remaining space, avoids a blank half-page
-  var highRisks = riskData.filter(function(r) { return (r.severity || '').toUpperCase() === 'HIGH'; }).slice(0, 3);
-  if (highRisks.length > 0 && doc.y < CBOT - 80) {
-    doc.fontSize(9).fillColor(SLATE).font('Helvetica-Bold')
-      .text('Critical Issues', 50, doc.y + 4);
-    doc.moveTo(50, doc.y).lineTo(545, doc.y).lineWidth(0.5).strokeColor(BLUE).stroke();
-    doc.y += 8;
-    highRisks.forEach(function(r) {
-      if (doc.y > CBOT - 40) return;
-      var rtext = (r.risk || r.description || '').replace(/\*\*/g, '');
-      var expl  = (r.explanation || '').replace(/\*\*/g, '');
-      var short = expl.length > 120 ? expl.substring(0, 120) + '…' : expl;
-      var iy = doc.y;
-      doc.rect(50, iy, 3, 34).fill(RED);
-      doc.fontSize(9).fillColor(SLATE).font('Helvetica-Bold')
-        .text(rtext, 60, iy, { width: W - 10, lineBreak: false });
-      doc.fontSize(8).fillColor(GREY).font('Helvetica')
-        .text(short, 60, iy + 13, { width: W - 10 });
-      doc.y += 6;
-    });
-  }
+  // Inline HIGH risks (top 2, red left bar)
+  var sumHighRisks = riskData.filter(function(r) { return (r.severity || '').toUpperCase() === 'HIGH'; }).slice(0, 2);
+  sumHighRisks.forEach(function(r) {
+    if (doc.y > CBOT - 40) return;
+    var rt   = (r.risk || r.description || '').replace(/\*\*/g, '');
+    var expl = (r.explanation || '').replace(/\*\*/g, '');
+    var iy   = doc.y;
+    doc.rect(50, iy, 3, 30).fill(RED);
+    doc.fontSize(8).fillColor(SLATE).font('Helvetica-Bold')
+      .text(rt.length > 60 ? rt.slice(0, 57) + '…' : rt, 60, iy, { width: sumLeftW - 10, lineBreak: false });
+    doc.fontSize(7).fillColor(GREY).font('Helvetica')
+      .text(expl.length > 80 ? expl.slice(0, 77) + '…' : expl, 60, iy + 13, { width: sumLeftW - 10 });
+    doc.y += 6;
+  });
+
+  // ── RIGHT COLUMN ───────────────────────────────────────────────────────────
+  var cardY = sumStartY;
+  doc.fontSize(7).fillColor(GREY).font('Helvetica-Bold')
+    .text('CRITICAL ISSUES', sumRightX, cardY, { width: sumRightW, lineBreak: false });
+  cardY += 12;
+
+  var cardRisks = riskData.slice().sort(function(a, b) {
+    var ord = { HIGH: 0, MEDIUM: 1, LOW: 2 };
+    return (ord[(a.severity || '').toUpperCase()] || 3) - (ord[(b.severity || '').toUpperCase()] || 3);
+  }).slice(0, 3);
+
+  cardRisks.forEach(function(r) {
+    var sev    = (r.severity || '').toUpperCase();
+    var cardBg = sev === 'HIGH' ? '#FEF2F2' : sev === 'MEDIUM' ? '#FFFBEB' : '#F0FDF4';
+    var cardBd = sev === 'HIGH' ? RED : sev === 'MEDIUM' ? AMBER : GREEN;
+    var label  = sev + (r.clauseRef ? ' · ' + r.clauseRef : '');
+    var body   = (r.risk || r.description || '').replace(/\*\*/g, '');
+    var bodyS  = body.length > 60 ? body.slice(0, 57) + '…' : body;
+    var cardH  = 44;
+    if (cardY + cardH > CBOT) return;
+    doc.rect(sumRightX, cardY, sumRightW, cardH).fill(cardBg);
+    doc.rect(sumRightX, cardY, 3, cardH).fill(cardBd);
+    doc.fontSize(7).fillColor(cardBd).font('Helvetica-Bold')
+      .text(label, sumRightX + 6, cardY + 5, { width: sumRightW - 10, lineBreak: false });
+    doc.fontSize(7).fillColor(SLATE).font('Helvetica')
+      .text(bodyS, sumRightX + 6, cardY + 17, { width: sumRightW - 10 });
+    cardY += cardH + 5;
+  });
 
   // ── Contract Metadata ──────────────────────────────────────────────────────
   if (metaData) {
@@ -614,16 +746,29 @@ app.get('/api/download/:sessionId', function(req, res) {
 
   // ── Risk Assessment ────────────────────────────────────────────────────────
   secHdr('Risk Assessment');
+
+  // Count tiles — 3 equal tiles, no exposure estimate
+  var tileW = Math.floor((W - 10) / 3);
+  var tileH = 52;
+  var tileY = doc.y;
+  [[String(riskCounts.h), 'HIGH RISK', RED, '#FEF2F2'],
+   [String(riskCounts.m), 'MEDIUM',    AMBER, '#FFFBEB'],
+   [String(riskCounts.l), 'LOW RISK',  GREEN, '#F0FDF4']
+  ].forEach(function(t, i) {
+    var tx = 50 + i * (tileW + 5);
+    doc.roundedRect(tx, tileY, tileW, tileH, 4).fill(t[3]);
+    doc.fontSize(24).fillColor(t[2]).font('Helvetica-Bold').text(t[0], tx, tileY + 6,  { width: tileW, align: 'center' });
+    doc.fontSize(7).fillColor(t[2]).font('Helvetica-Bold').text(t[1],  tx, tileY + 36, { width: tileW, align: 'center' });
+  });
+  doc.y = tileY + tileH + 10;
+
   if (riskData.length > 0) {
-    var sorted = riskData.slice().sort(function(a, b) {
+    var sortedRisks = riskData.slice().sort(function(a, b) {
       var ord = { HIGH: 0, MEDIUM: 1, LOW: 2 };
-      return (ord[a.severity] !== undefined ? ord[a.severity] : 3) - (ord[b.severity] !== undefined ? ord[b.severity] : 3);
+      return (ord[(a.severity || '').toUpperCase()] !== undefined ? ord[(a.severity || '').toUpperCase()] : 3)
+           - (ord[(b.severity || '').toUpperCase()] !== undefined ? ord[(b.severity || '').toUpperCase()] : 3);
     });
-    drawTable(
-      ['Risk', 'Severity', 'Clause Ref', 'Notes'],
-      sorted.map(function(r) { return [r.risk || r.description || '--', r.severity || '--', r.clauseRef || '--', r.explanation || '--']; }),
-      [130, 65, 70, W - 265]
-    );
+    drawRiskTable(sortedRisks);
   } else {
     doc.fontSize(10).fillColor(GREY).text('No risk data available.', 50, doc.y);
   }
