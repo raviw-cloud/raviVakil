@@ -1,5 +1,6 @@
 require('dotenv').config({ override: true });
 const express     = require('express');
+const rateLimit   = require('express-rate-limit');
 const multer      = require('multer');
 const pdfParse    = require('pdf-parse');
 const PDFDocument = require('pdfkit');
@@ -21,6 +22,14 @@ const skills = {
 
 const HAIKU_MODEL = 'claude-haiku-4-5-20251001';
 const reportCache = new Map();   // sessionId -> { results, score, grade, recommendation, filename }
+
+const analyzeLimit = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many requests. Please wait 15 minutes before analyzing again.' },
+});
 
 app.use(express.static('public'));
 app.use(express.json());
@@ -137,6 +146,12 @@ async function extractPdfText(buffer) {
   // Used when all text engines return empty — typical of government eRegistration
   // PDFs (Maharashtra IGR etc.) where every page is a rasterised JPEG image.
   // Sends the raw PDF to Claude and asks for a plain-text extraction.
+  // Claude's PDF vision supports up to 100 pages; base64 adds ~33% size overhead.
+  const S4_MAX_BYTES = 5 * 1024 * 1024; // 5 MB — keeps base64 payload under ~6.7 MB
+  if (buffer.length > S4_MAX_BYTES) {
+    console.warn('[pdf] S4 skipped: buffer', (buffer.length / 1e6).toFixed(1), 'MB exceeds 5 MB limit for AI vision');
+    return null;
+  }
   try {
     console.log('[pdf] S4: Claude AI vision — image-based PDF detected, extracting via AI');
     const aiResp = await client.messages.create(
@@ -237,9 +252,14 @@ const scoreToRec   = s => s >= 85 ? 'SIGN' : s >= 60 ? 'NEGOTIATE' : s >= 40 ? '
 
 // ── Analyze route ──────────────────────────────────────────────────────────────
 
-app.post('/api/analyze', upload.single('pdf'), async (req, res) => {
+function isPdfBuffer(buf) {
+  return buf.length >= 4 &&
+    buf[0] === 0x25 && buf[1] === 0x50 && buf[2] === 0x44 && buf[3] === 0x46; // %PDF
+}
+
+app.post('/api/analyze', analyzeLimit, upload.single('pdf'), async (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'No PDF uploaded.' });
-  if (req.file.mimetype !== 'application/pdf') return res.status(400).json({ error: 'Only PDF files are accepted.' });
+  if (!isPdfBuffer(req.file.buffer)) return res.status(400).json({ error: 'Only PDF files are accepted.' });
 
   try {
     const rawText = await extractPdfText(req.file.buffer);
@@ -253,16 +273,17 @@ app.post('/api/analyze', upload.single('pdf'), async (req, res) => {
     const clause  = rawText.length > 6000 ? rawText.slice(0, 6000) + '\n...[truncated]' : rawText;
 
     const t0 = Date.now();
+    const sys = name => [{ type: 'text', text: skills[name], cache_control: { type: 'ephemeral' } }];
     const [cR, rR, coR, tR, reR] = await Promise.all([
-      client.messages.create({ model: HAIKU_MODEL, max_tokens: 4000, system: skills.clauses,
+      client.messages.create({ model: HAIKU_MODEL, max_tokens: 4000, system: sys('clauses'),
         messages: [{ role: 'user', content: 'Analyze this contract. Return ONLY valid JSON:\n{"clauses":[{"clauseName":"...","location":"...","summary":"..."}],"metadata":{"contractType":"...","parties":"...","effectiveDate":"...","term":"...","governingLaw":"...","totalValue":"..."},"missingProtections":["missing clause 1","missing clause 2"],"score":0-100,"summary":"2 sentences"}\nMax 12 clauses, max 8 missing protections.\n\n' + full }] }),
-      client.messages.create({ model: HAIKU_MODEL, max_tokens: 2500, system: skills.risks,
+      client.messages.create({ model: HAIKU_MODEL, max_tokens: 2500, system: sys('risks'),
         messages: [{ role: 'user', content: 'Assess risk. Return ONLY valid JSON: {"risks":[{"risk":"...","severity":"HIGH|MEDIUM|LOW","clauseRef":"...","explanation":"..."}],"score":0-100}. Max 10 risks.\n\n' + clause }] }),
-      client.messages.create({ model: HAIKU_MODEL, max_tokens: 2500, system: skills.compliance,
+      client.messages.create({ model: HAIKU_MODEL, max_tokens: 2500, system: sys('compliance'),
         messages: [{ role: 'user', content: 'Check Indian law compliance. Return ONLY valid JSON: {"issues":[{"issue":"...","severity":"HIGH|MEDIUM|LOW","statute":"..."}],"score":0-100}. Max 8 issues.\n\n' + full }] }),
-      client.messages.create({ model: HAIKU_MODEL, max_tokens: 2500, system: skills.terms,
+      client.messages.create({ model: HAIKU_MODEL, max_tokens: 2500, system: sys('terms'),
         messages: [{ role: 'user', content: 'Map obligations and deadlines. Return ONLY valid JSON: {"obligations":[{"party":"...","obligation":"...","deadline":"...","consequence":"..."}],"score":0-100}. Max 10.\n\n' + clause }] }),
-      client.messages.create({ model: HAIKU_MODEL, max_tokens: 3000, system: skills.recommendations,
+      client.messages.create({ model: HAIKU_MODEL, max_tokens: 3000, system: sys('recommendations'),
         messages: [{ role: 'user', content: 'Top 6 recommendations. Return ONLY valid JSON: {"recommendations":[{"priority":"P0-P4","action":"...","recommendation":"max 120 chars"}],"score":0-100}.\n\n' + clause }] }),
     ]);
 
@@ -280,10 +301,15 @@ app.post('/api/analyze', upload.single('pdf'), async (req, res) => {
       if (r && r.parseError) console.error('[analyze] PARSE ERROR -', agent, ':', (r.raw || '').slice(0, 200));
     });
 
-    const totalIn  = [cR, rR, coR, tR, reR].reduce((s, r) => s + (r.usage.input_tokens  || 0), 0);
-    const totalOut = [cR, rR, coR, tR, reR].reduce((s, r) => s + (r.usage.output_tokens || 0), 0);
-    const cost = ((totalIn / 1e6) * 0.80 + (totalOut / 1e6) * 4.00).toFixed(4);
-    console.log('[analyze]', req.file.originalname, '|', elapsed + 's |', totalIn + 'in/' + totalOut + 'out | $' + cost);
+    const responses = [cR, rR, coR, tR, reR];
+    const totalIn     = responses.reduce((s, r) => s + (r.usage.input_tokens          || 0), 0);
+    const totalOut    = responses.reduce((s, r) => s + (r.usage.output_tokens         || 0), 0);
+    const totalWrite  = responses.reduce((s, r) => s + (r.usage.cache_creation_input_tokens || 0), 0);
+    const totalRead   = responses.reduce((s, r) => s + (r.usage.cache_read_input_tokens     || 0), 0);
+    const cost = ((totalIn / 1e6) * 0.80 + (totalOut / 1e6) * 4.00
+                + (totalWrite / 1e6) * 1.00 + (totalRead / 1e6) * 0.08).toFixed(4);
+    console.log('[analyze]', req.file.originalname, '|', elapsed + 's |',
+      totalIn + 'in/' + totalOut + 'out | cache write=' + totalWrite + ' read=' + totalRead + ' | $' + cost);
 
     const score          = calculateScore(results);
     const grade          = scoreToGrade(score);
@@ -298,10 +324,10 @@ app.post('/api/analyze', upload.single('pdf'), async (req, res) => {
     res.json({ sessionId, score, grade, recommendation, summary: summaryText, cost });
 
   } catch (err) {
-    console.error('[analyze] error:', err.message);
+    console.error('[analyze] error:', err);
     if (err.status === 401) return res.status(500).json({ error: 'Invalid API key.' });
-    if (err.status === 429) return res.status(500).json({ error: 'Rate limit. Try again in a moment.' });
-    res.status(500).json({ error: 'Analysis failed: ' + err.message });
+    if (err.status === 429) return res.status(500).json({ error: 'Rate limit reached. Try again in a moment.' });
+    res.status(500).json({ error: 'Analysis failed. Please try again.' });
   }
 });
 
@@ -318,7 +344,9 @@ app.get('/api/download/:sessionId', function(req, res) {
   const outFilename = 'CONTRACT-REVIEW-' + baseName + '-' + today + '.pdf';
 
   res.setHeader('Content-Type', 'application/pdf');
-  res.setHeader('Content-Disposition', 'attachment; filename="' + outFilename + '"');
+  const encodedFilename = encodeURIComponent(outFilename).replace(/'/g, '%27');
+  res.setHeader('Content-Disposition',
+    'attachment; filename="' + outFilename + '"; filename*=UTF-8\'\'' + encodedFilename);
 
   // Extract structured arrays directly — no markdown parsing
   const clauseData = (results.clauses  && Array.isArray(results.clauses.clauses))                         ? results.clauses.clauses.slice(0, 12)          : [];
@@ -338,7 +366,7 @@ app.get('/api/download/:sessionId', function(req, res) {
     return a;
   }, { h: 0, m: 0, l: 0 });
 
-  const SLATE = '#1E293B', BLUE = '#2563EB', WHITE = '#FFFFFF', LIGHTBG = '#F3F4F6';
+  const SLATE = '#1E293B', BLUE = '#B45309', WHITE = '#FFFFFF', LIGHTBG = '#F3F4F6';
   const RED = '#DC2626', AMBER = '#D97706', GREEN = '#16A34A', GREY = '#6B7280';
   const ALTROW = '#F8FAFC';
   const W = 495, CTOP = 88, CBOT = 760;
@@ -380,7 +408,7 @@ app.get('/api/download/:sessionId', function(req, res) {
 
   // Callout block for NOTE / WARNING / TIP
   function drawCallout(type, text) {
-    var map = { WARNING: [RED, '#FEF2F2'], NOTE: [BLUE, '#EFF6FF'], TIP: [GREEN, '#F0FDF4'] };
+    var map = { WARNING: [RED, '#FEF2F2'], NOTE: [BLUE, '#FFFBEB'], TIP: [GREEN, '#F0FDF4'] };
     var pair = map[type] || [GREY, LIGHTBG];
     var border = pair[0], bg = pair[1];
     var startY = doc.y;
