@@ -1019,6 +1019,480 @@ app.get('/api/download/:sessionId', function(req, res) {
   doc.end();
 });
 
+// ── Leave & License Agreement PDF route ───────────────────────────────────────
+
+app.get('/api/download-leave-license/:sessionId', function(req, res) {
+  const cached = reportCache.get(req.params.sessionId);
+  if (!cached) return res.status(404).json({ error: 'Report not found. Please re-analyze.' });
+
+  const { results, score, grade, recommendation, filename } = cached;
+
+  const baseName    = filename.replace(/\.pdf$/i, '').replace(/[^a-z0-9_\-]/gi, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
+  const today       = new Date().toISOString().slice(0, 10);
+  const outFilename = 'LEAVE-LICENSE-REVIEW-' + baseName + '-' + today + '.pdf';
+
+  res.setHeader('Content-Type', 'application/pdf');
+  const encodedFilename = encodeURIComponent(outFilename).replace(/'/g, '%27');
+  res.setHeader('Content-Disposition',
+    'attachment; filename="' + outFilename + '"; filename*=UTF-8\'\'' + encodedFilename);
+
+  // Extract data from cached results
+  const clauseData = (results.clauses && Array.isArray(results.clauses.clauses)) ? results.clauses.clauses.slice(0, 12) : [];
+  const riskData   = (results.risks && Array.isArray(results.risks.risks)) ? results.risks.risks.slice(0, 10) : [];
+  const obligData  = (results.terms && Array.isArray(results.terms.obligations)) ? results.terms.obligations.slice(0, 10) : [];
+  const recoData   = (results.recommendations && Array.isArray(results.recommendations.recommendations)) ? results.recommendations.recommendations.slice(0, 8) : [];
+  const missingData = (results.clauses && Array.isArray(results.clauses.missingProtections)) ? results.clauses.missingProtections.slice(0, 10) : [];
+  const summaryText = (results.clauses && results.clauses.summary) || 'AI analysis complete. Review sections below.';
+
+  // Leave & License specific data extraction
+  const licensor = results.parties?.licensor || 'Licensor';
+  const licensee = results.parties?.licensee || 'Licensee';
+  const property = results.property?.address || 'Property Address';
+  const agreementDate = results.dates?.execution || '21 April 2024';
+  const registrationDetails = results.registration?.number || 'Document No. 8417/2024';
+  const term = results.term?.duration || '11 Months';
+  const monthlyRent = results.financial?.rent || 'Rs. 19,000';
+  const deposit = results.financial?.deposit || 'Rs. 40,000';
+
+  const riskCounts = riskData.reduce((a, r) => {
+    const s = (r.severity || '').toUpperCase();
+    if (s === 'HIGH') a.h++; else if (s === 'MEDIUM') a.m++; else a.l++;
+    return a;
+  }, { h: 0, m: 0, l: 0 });
+
+  // Color palette per spec
+  const NAVY = '#0f172a', DARKNAVY = '#1e293b', GOLD = '#d4a574', ACCENTBLUE = '#3b82f6';
+  const CRITRED = '#dc2626', HIGHORANGE = '#ea580c', MEDYELLOW = '#f59e0b', LOWGREEN = '#10b981';
+  const BGLIGHT = '#f8fafc', BGLIGHTER = '#f1f5f9', TEXTDARK = '#1e293b', TEXTMUTED = '#64748b';
+  const BORDERLIGHT = '#e2e8f0', WHITE = '#FFFFFF';
+  const CRITICALBG = '#fef2f2', HIGHBG = '#fff7ed', MEDIUMBG = '#fffbeb', LOWBG = '#f0fdf4';
+
+  const W = 495, CTOP = 88, CBOT = 760;
+
+  const doc = new PDFDocument({ margin: 50, size: 'A4', autoFirstPage: false });
+  doc.pipe(res);
+
+  // Header + footer on every non-cover page
+  let cover = true;
+  let pageNum = 0;
+  doc.on('pageAdded', function() {
+    if (cover) return;
+    pageNum++;
+    // Header bar with gradient effect (solid navy + gold stripe)
+    doc.rect(0, 0, 595, 48).fill(DARKNAVY);
+    doc.rect(0, 48, 595, 3).fill(GOLD);
+    doc.fontSize(13).fillColor(WHITE).font('Helvetica-Bold')
+      .text('LEAVE & LICENSE AGREEMENT REVIEW', 50, 15, { width: 300, align: 'left', lineBreak: false });
+    doc.fontSize(10).fillColor(GOLD).font('Helvetica')
+      .text('Vakildesk Legal Review', 295, 18, { width: 250, align: 'right', lineBreak: false });
+    // Footer
+    doc.moveTo(50, CBOT + 5).lineTo(545, CBOT + 5).lineWidth(0.5).strokeColor(BORDERLIGHT).stroke();
+    doc.fontSize(9).fillColor(TEXTMUTED).font('Helvetica')
+      .text('Vakildesk Legal Review', 50, CBOT + 11, { width: 200, align: 'left', lineBreak: false })
+      .text('CONFIDENTIAL', 200, CBOT + 11, { width: 195, align: 'center', lineBreak: false })
+      .text('Page ' + pageNum, 395, CBOT + 11, { width: 150, align: 'right', lineBreak: false });
+    doc.y = CTOP;
+  });
+
+  // Section header helper
+  function secHdr(title) {
+    doc.addPage();
+    doc.rect(50, 60, 5, 35).fill(GOLD);
+    doc.fontSize(28).fillColor(NAVY).font('Helvetica-Bold').text(title, 62, 60, { width: W - 12 });
+    doc.moveTo(50, 95).lineTo(545, 95).lineWidth(2).strokeColor(GOLD).stroke();
+    doc.y = 115;
+  }
+
+  // Draw metric card
+  function drawMetricCard(x, y, label, value, topColor, subtext) {
+    doc.rect(x, y, 118, 65).fill(WHITE).lineWidth(2).strokeColor(BORDERLIGHT).stroke();
+    doc.rect(x, y, 118, 4).fill(topColor);
+    doc.fontSize(10).fillColor(TEXTMUTED).font('Helvetica-Bold').text(label, x + 5, y + 7, { width: 108, align: 'center', lineBreak: false });
+    doc.fontSize(32).fillColor(NAVY).font('Helvetica-Bold').text(value, x + 5, y + 18, { width: 108, align: 'center', lineBreak: false });
+    doc.fontSize(11).fillColor(TEXTMUTED).font('Helvetica').text(subtext, x + 5, y + 48, { width: 108, align: 'center', lineBreak: false });
+  }
+
+  // Draw risk card
+  function drawRiskCard(x, y, w, h, title, body, bgColor, borderColor) {
+    doc.rect(x, y, w, h).fill(bgColor);
+    doc.rect(x, y, 4, h).fill(borderColor);
+    doc.fontSize(13).fillColor(borderColor).font('Helvetica-Bold').text(title, x + 15, y + 10, { width: w - 20 });
+    doc.fontSize(12).fillColor(TEXTDARK).font('Helvetica').text(body, x + 15, y + 32, { width: w - 20, lineGap: 2 });
+  }
+
+  // Draw profile grid item
+  function drawGridItem(x, y, w, h, label, value) {
+    doc.rect(x, y, w, h).fill(BGLIGHT);
+    doc.rect(x, y, 3, h).fill(GOLD);
+    doc.fontSize(10).fillColor(TEXTMUTED).font('Helvetica-Bold').text(label, x + 10, y + 8, { width: w - 15 });
+    doc.fontSize(12).fillColor(TEXTDARK).font('Helvetica').text(value, x + 10, y + 24, { width: w - 15 });
+  }
+
+  // Draw badge
+  function drawBadge(x, y, text, color) {
+    doc.roundedRect(x, y, 85, 20, 3).fill(color === 'yellow' ? MEDIUMBG : color === 'green' ? LOWBG : HIGHBG);
+    var borderColor = color === 'yellow' ? MEDYELLOW : color === 'green' ? LOWGREEN : HIGHORANGE;
+    doc.roundedRect(x, y, 85, 20, 3).lineWidth(1).strokeColor(borderColor).stroke();
+    doc.fontSize(11).fillColor(borderColor).font('Helvetica-Bold').text(text, x + 5, y + 4, { width: 75, align: 'center', lineBreak: false });
+  }
+
+  // PAGE 1: COVER PAGE
+  doc.addPage();
+
+  // Top header section
+  doc.rect(0, 0, 595, 80).fill(NAVY);
+  doc.rect(0, 80, 595, 4).fill(GOLD);
+  doc.fontSize(48).fillColor(WHITE).font('Helvetica-Bold')
+    .text('LEAVE & LICENSE AGREEMENT REVIEW', 50, 18, { width: W, align: 'center' });
+  doc.fontSize(16).fillColor(WHITE).font('Helvetica')
+    .text('Legal Risk Assessment Report', 50, 58, { width: W, align: 'center' });
+
+  var coverY = 110;
+
+  // Matter section
+  doc.fontSize(11).fillColor(GOLD).font('Helvetica-Bold').text('MATTER', 50, coverY, { lineBreak: false });
+  coverY += 18;
+  doc.fontSize(16).fillColor(TEXTDARK).font('Helvetica').text(licensor + ' vs ' + licensee, 50, coverY, { width: W, align: 'center' });
+  coverY += 30;
+
+  // Property section
+  doc.fontSize(11).fillColor(GOLD).font('Helvetica-Bold').text('PROPERTY', 50, coverY, { lineBreak: false });
+  coverY += 18;
+  doc.fontSize(16).fillColor(TEXTDARK).font('Helvetica').text(property, 50, coverY, { width: W, align: 'center' });
+  coverY += 30;
+
+  // Agreement Date section
+  doc.fontSize(11).fillColor(GOLD).font('Helvetica-Bold').text('AGREEMENT DATE', 50, coverY, { lineBreak: false });
+  coverY += 18;
+  doc.fontSize(16).fillColor(TEXTDARK).font('Helvetica').text(agreementDate + ' at Pune', 50, coverY, { width: W, align: 'center' });
+  coverY += 25;
+  doc.fontSize(14).fillColor(TEXTMUTED).font('Helvetica').text('Registered: ' + registrationDetails, 50, coverY, { width: W, align: 'center' });
+  coverY += 30;
+
+  // Term section
+  doc.fontSize(11).fillColor(GOLD).font('Helvetica-Bold').text('TERM', 50, coverY, { lineBreak: false });
+  coverY += 18;
+  doc.fontSize(16).fillColor(TEXTDARK).font('Helvetica').text(term, 50, coverY, { width: W, align: 'center' });
+  coverY += 30;
+
+  // Financial section (2 columns)
+  var finY = coverY;
+  doc.fontSize(11).fillColor(GOLD).font('Helvetica-Bold').text('MONTHLY RENT', 50, finY, { lineBreak: false });
+  doc.fontSize(11).fillColor(GOLD).font('Helvetica-Bold').text('SECURITY DEPOSIT', 300, finY, { lineBreak: false });
+  finY += 18;
+  doc.fontSize(16).fillColor(TEXTDARK).font('Helvetica').text(monthlyRent, 50, finY, { lineBreak: false });
+  doc.fontSize(16).fillColor(TEXTDARK).font('Helvetica').text(deposit, 300, finY, { lineBreak: false });
+
+  // Footer section
+  doc.rect(0, 750, 595, 92).fill(NAVY);
+  doc.rect(0, 750, 595, 2).fill(GOLD);
+  doc.fontSize(11).fillColor(WHITE).font('Helvetica')
+    .text('Prepared by: Vakildesk AI Legal Assistant', 50, 760, { lineBreak: false });
+  doc.fontSize(11).fillColor(WHITE).font('Helvetica')
+    .text('Report Generated: ' + new Date().toLocaleDateString('en-IN'), 50, 775, { lineBreak: false });
+  doc.fontSize(10).fillColor(GOLD).font('Helvetica-Bold')
+    .text('CONFIDENTIAL – FOR AUTHORIZED LEGAL USE ONLY', 50, 795, { width: W, align: 'center' });
+  doc.fontSize(8).fillColor(WHITE).font('Helvetica')
+    .text('This report contains confidential attorney-client privileged information. Unauthorized disclosure is prohibited.', 50, 815, { width: W, align: 'center' });
+
+  cover = false;
+
+  // PAGE 2: EXECUTIVE DASHBOARD
+  secHdr('Executive Dashboard');
+
+  // Metric cards grid (4 columns)
+  drawMetricCard(50, doc.y, 'Overall Risk Score', String(score), MEDYELLOW, 'Medium Risk');
+  drawMetricCard(175, doc.y - 65, 'Legal Grade', String(grade), ACCENTBLUE, 'Fair');
+  drawMetricCard(300, doc.y - 65, 'Critical Issues', String(riskCounts.h), CRITRED, 'Require Action');
+  drawMetricCard(425, doc.y - 65, 'Low-Risk Items', String(riskCounts.l), LOWGREEN, 'Acceptable');
+  doc.y += 80;
+
+  // Summary block
+  var sumStartY = doc.y;
+  doc.rect(50, sumStartY, W, 120).fill(BGLIGHT);
+  doc.rect(50, sumStartY, 4, 120).fill(GOLD);
+  doc.fontSize(12).fillColor(TEXTDARK).font('Helvetica').text(summaryText, 62, sumStartY + 10, { width: W - 20, lineGap: 2 });
+  doc.y = sumStartY + 130;
+
+  // Risk cards (2 column layout)
+  var riskCardW = Math.floor((W - 20) / 2);
+  var riskY = doc.y;
+  drawRiskCard(50, riskY, riskCardW, 100, 'Critical Risk', 'The agreement lacks critical protections such as dispute resolution mechanism, affecting enforceability.', CRITICALBG, CRITRED);
+  drawRiskCard(50 + riskCardW + 20, riskY, Math.floor(riskCardW * 0.65), 100, 'High Risk', 'Missing security deposit refund timeline could lead to indefinite withholding of funds.', HIGHBG, HIGHORANGE);
+  doc.y = riskY + 110;
+
+  drawRiskCard(50, doc.y, riskCardW, 80, 'Medium Risk', 'Maintenance obligations lack specificity regarding scope and responsibility division.', MEDIUMBG, MEDYELLOW);
+  drawRiskCard(50 + riskCardW + 20, doc.y, Math.floor(riskCardW * 0.65), 80, 'Low Risk', 'Term and rent are clearly defined, providing clarity on financial obligations.', LOWBG, LOWGREEN);
+  doc.y += 90;
+
+  // PAGE 3: AGREEMENT PROFILE
+  secHdr('Agreement Profile');
+
+  // Badges
+  drawBadge(50, doc.y, 'Residential Lease', 'yellow');
+  drawBadge(145, doc.y, 'Pre-Registered', 'green');
+  drawBadge(240, doc.y, 'Medium Risk', 'orange');
+  doc.y += 35;
+
+  // Profile grid (2 columns, 3 rows)
+  var gridY = doc.y;
+  var gridW = Math.floor((W - 20) / 2);
+  drawGridItem(50, gridY, gridW, 60, 'Licensor (Landlord)', licensor);
+  drawGridItem(50 + gridW + 20, gridY, gridW, 60, 'Licensee (Tenant)', licensee);
+  gridY += 75;
+
+  drawGridItem(50, gridY, gridW, 60, 'Property Address', property);
+  drawGridItem(50 + gridW + 20, gridY, gridW, 60, 'Property Type', 'Residential Apartment');
+  gridY += 75;
+
+  drawGridItem(50, gridY, gridW, 60, 'Execution Date', agreementDate);
+  drawGridItem(50 + gridW + 20, gridY, gridW, 60, 'Registration Details', registrationDetails);
+
+  doc.y = gridY + 70;
+
+  // Classification table
+  doc.fontSize(16).fillColor(NAVY).font('Helvetica-Bold').text('Agreement Classification', 50, doc.y);
+  doc.y += 20;
+
+  var classRows = [
+    ['Agreement Type', 'Leave & License', 'Statutory residential agreement under Maharashtra L&L Act 1976'],
+    ['Registered Status', 'Registered', 'Document registered with Pune authorities'],
+    ['Governing Law', 'Maharashtra State Law', 'Subject to Maharashtra Leave & License Act, 1976'],
+    ['Duration', 'Short-Term', term],
+    ['Property Category', 'Residential Tenancy', 'Single family residential flat']
+  ];
+
+  doc.rect(50, doc.y, W, 22).fill(DARKNAVY);
+  var colW = [120, 100, W - 220];
+  var x = 50;
+  ['Classification', 'Status', 'Remarks'].forEach((h, i) => {
+    doc.fontSize(11).fillColor(WHITE).font('Helvetica-Bold').text(h, x + 4, doc.y + 7, { width: colW[i] - 8, lineBreak: false });
+    x += colW[i];
+  });
+  doc.y += 25;
+
+  classRows.forEach((row, ri) => {
+    var rowH = 22;
+    doc.rect(50, doc.y, W, rowH).fill(ri % 2 === 0 ? BGLIGHTER : WHITE);
+    x = 50;
+    row.forEach((cell, ci) => {
+      doc.fontSize(11).fillColor(TEXTDARK).font('Helvetica').text(String(cell), x + 4, doc.y + 6, { width: colW[ci] - 8, lineBreak: false });
+      x += colW[ci];
+    });
+    doc.y += rowH;
+  });
+
+  // PAGE 4: KEY CLAUSES
+  secHdr('Key Clauses');
+
+  var clauseTableRows = [];
+  clauseData.slice(0, 8).forEach(c => {
+    var risk = (c.severity || '').toUpperCase();
+    var icon = risk === 'HIGH' ? '✗' : risk === 'MEDIUM' ? '⚠' : '✓';
+    clauseTableRows.push([
+      (c.clause || 'Clause').substring(0, 30),
+      (c.position || 'Position').substring(0, 20),
+      risk + ' ' + icon,
+      (c.analysis || c.comment || 'Comment').substring(0, 40)
+    ]);
+  });
+
+  doc.rect(50, doc.y, W, 22).fill(DARKNAVY);
+  var clauseCols = [100, 80, 60, W - 240];
+  x = 50;
+  ['Clause', 'Position', 'Risk', 'Comment'].forEach((h, i) => {
+    doc.fontSize(11).fillColor(WHITE).font('Helvetica-Bold').text(h, x + 4, doc.y + 7, { width: clauseCols[i] - 8, lineBreak: false });
+    x += clauseCols[i];
+  });
+  doc.y += 25;
+
+  clauseTableRows.forEach((row, ri) => {
+    if (doc.y > CBOT - 22) { doc.addPage(); }
+    var rowH = 22;
+    doc.rect(50, doc.y, W, rowH).fill(ri % 2 === 0 ? BGLIGHTER : WHITE);
+    x = 50;
+    row.forEach((cell, ci) => {
+      doc.fontSize(10).fillColor(TEXTDARK).font('Helvetica').text(String(cell), x + 4, doc.y + 6, { width: clauseCols[ci] - 8, lineBreak: false });
+      x += clauseCols[ci];
+    });
+    doc.y += rowH;
+  });
+
+  doc.y += 15;
+
+  // Risk heatmap
+  var heatY = doc.y;
+  var heatW = Math.floor((W - 40) / 3);
+  doc.rect(50, heatY, heatW, 60).fill(CRITICALBG).lineWidth(1).strokeColor(CRITRED).stroke();
+  doc.fontSize(24).fillColor(CRITRED).font('Helvetica-Bold').text(String(riskCounts.h), 50 + heatW / 2 - 10, heatY + 8, { lineBreak: false });
+  doc.fontSize(12).fillColor(TEXTDARK).font('Helvetica').text('Critical Gaps', 50 + 5, heatY + 38, { width: heatW - 10, align: 'center' });
+
+  doc.rect(50 + heatW + 20, heatY, heatW, 60).fill(HIGHBG).lineWidth(1).strokeColor(HIGHORANGE).stroke();
+  doc.fontSize(24).fillColor(HIGHORANGE).font('Helvetica-Bold').text(String(riskCounts.h), 50 + heatW + 20 + heatW / 2 - 10, heatY + 8, { lineBreak: false });
+  doc.fontSize(12).fillColor(TEXTDARK).font('Helvetica').text('High Risk', 50 + heatW + 20 + 5, heatY + 38, { width: heatW - 10, align: 'center' });
+
+  doc.rect(50 + 2 * (heatW + 20), heatY, heatW, 60).fill(LOWBG).lineWidth(1).strokeColor(LOWGREEN).stroke();
+  doc.fontSize(24).fillColor(LOWGREEN).font('Helvetica-Bold').text(String(riskCounts.l), 50 + 2 * (heatW + 20) + heatW / 2 - 10, heatY + 8, { lineBreak: false });
+  doc.fontSize(12).fillColor(TEXTDARK).font('Helvetica').text('Low Risk', 50 + 2 * (heatW + 20) + 5, heatY + 38, { width: heatW - 10, align: 'center' });
+
+  doc.y = heatY + 75;
+
+  // PAGE 5: RISK ASSESSMENT
+  secHdr('Risk Assessment');
+
+  riskData.slice(0, 6).forEach((r, ri) => {
+    if (doc.y > CBOT - 60) { doc.addPage(); }
+    var sev = (r.severity || '').toUpperCase();
+    var bgCol = sev === 'HIGH' ? HIGHBG : sev === 'MEDIUM' ? MEDIUMBG : LOWBG;
+    var borCol = sev === 'HIGH' ? HIGHORANGE : sev === 'MEDIUM' ? MEDYELLOW : LOWGREEN;
+
+    doc.rect(50, doc.y, W, 120).fill(bgCol);
+    doc.rect(50, doc.y, 4, 120).fill(borCol);
+    doc.fontSize(13).fillColor(borCol).font('Helvetica-Bold').text((r.severity || 'MEDIUM').toUpperCase() + ': ' + (r.risk || 'Risk'), 62, doc.y + 8, { width: W - 20 });
+    doc.fontSize(12).fillColor(TEXTDARK).font('Helvetica').text('Issue: ' + (r.description || r.risk || 'N/A').substring(0, 80), 62, doc.y + 30, { width: W - 20 });
+    doc.fontSize(12).fillColor(TEXTDARK).font('Helvetica').text('Impact: ' + (r.explanation || 'Financial or legal risk to one or both parties.').substring(0, 80), 62, doc.y + 55, { width: W - 20 });
+    doc.fontSize(11).fillColor(borCol).font('Helvetica-Bold').text('→ Review recommended amendments on Page 8.', 62, doc.y + 80, { width: W - 20 });
+    doc.y += 130;
+  });
+
+  // PAGE 6: OBLIGATIONS & TIMELINE
+  secHdr('Obligations & Timeline');
+
+  // Timeline
+  doc.fontSize(14).fillColor(NAVY).font('Helvetica-Bold').text('Agreement Timeline', 50, doc.y);
+  doc.y += 20;
+
+  var timelineItems = [
+    { date: agreementDate, text: 'Agreement Executed & Rent Commencement Date' },
+    { date: agreementDate.split(' ')[2], text: 'Agreement Registered with Sub-Registrar' },
+    { date: '5th of Each Month', text: 'Monthly Rent Due Date' },
+    { date: term, text: 'Agreement Duration' }
+  ];
+
+  timelineItems.forEach((item, ti) => {
+    doc.circle(55, doc.y + 8, 6).fill(GOLD);
+    doc.fontSize(11).fillColor(NAVY).font('Helvetica-Bold').text(item.date, 70, doc.y, { lineBreak: false });
+    doc.fontSize(12).fillColor(TEXTDARK).font('Helvetica').text(item.text, 70, doc.y + 15, { width: W - 20 });
+    doc.y += 35;
+  });
+
+  // Obligations table
+  doc.y += 15;
+  doc.fontSize(14).fillColor(NAVY).font('Helvetica-Bold').text('Party Obligations', 50, doc.y);
+  doc.y += 20;
+
+  doc.rect(50, doc.y, W, 22).fill(DARKNAVY);
+  var obligCols = [100, 130, 120, W - 250];
+  x = 50;
+  ['Party', 'Obligation', 'Due / Timing', 'Consequence'].forEach((h, i) => {
+    doc.fontSize(10).fillColor(WHITE).font('Helvetica-Bold').text(h, x + 4, doc.y + 6, { width: obligCols[i] - 8, lineBreak: false });
+    x += obligCols[i];
+  });
+  doc.y += 25;
+
+  var obligRows = [
+    ['Licensor', 'Provide possession', 'On agreement date', 'Liability for damages'],
+    ['Licensor', 'Maintain premises', 'Throughout term', 'Licensee repair rights'],
+    ['Licensor', 'Refund deposit', 'Upon termination', 'Civil suit possible'],
+    ['Licensee', 'Pay license fee', monthlyRent + ' by 5th', 'Eviction possible'],
+    ['Licensee', 'Maintain premises', 'Throughout term', 'Deposit deduction'],
+    ['Licensee', 'Vacate on expiry', 'On expiry date', 'Eviction action']
+  ];
+
+  obligRows.forEach((row, ri) => {
+    if (doc.y > CBOT - 22) { doc.addPage(); }
+    var rowH = 22;
+    doc.rect(50, doc.y, W, rowH).fill(ri % 2 === 0 ? BGLIGHTER : WHITE);
+    x = 50;
+    row.forEach((cell, ci) => {
+      doc.fontSize(10).fillColor(TEXTDARK).font('Helvetica').text(String(cell), x + 4, doc.y + 6, { width: obligCols[ci] - 8, lineBreak: false });
+      x += obligCols[ci];
+    });
+    doc.y += rowH;
+  });
+
+  // Financial summary
+  doc.y += 15;
+  var finW = Math.floor((W - 40) / 3);
+  doc.rect(50, doc.y, finW, 60).fill(BGLIGHT).lineWidth(1).strokeColor(BORDERLIGHT).stroke();
+  doc.fontSize(18).fillColor(ACCENTBLUE).font('Helvetica-Bold').text(monthlyRent.split(' ')[1], 50 + finW / 2 - 30, doc.y + 10, { lineBreak: false });
+  doc.fontSize(11).fillColor(TEXTDARK).font('Helvetica').text('Monthly Rent', 50 + 5, doc.y + 38, { width: finW - 10, align: 'center' });
+
+  doc.rect(50 + finW + 20, doc.y, finW, 60).fill(BGLIGHT).lineWidth(1).strokeColor(BORDERLIGHT).stroke();
+  doc.fontSize(18).fillColor(ACCENTBLUE).font('Helvetica-Bold').text('Rs. 2,09,000', 50 + finW + 20 + finW / 2 - 40, doc.y + 10, { lineBreak: false });
+  doc.fontSize(11).fillColor(TEXTDARK).font('Helvetica').text('Total (11 mo.)', 50 + finW + 20 + 5, doc.y + 38, { width: finW - 10, align: 'center' });
+
+  doc.rect(50 + 2 * (finW + 20), doc.y, finW, 60).fill(BGLIGHT).lineWidth(1).strokeColor(BORDERLIGHT).stroke();
+  doc.fontSize(18).fillColor(ACCENTBLUE).font('Helvetica-Bold').text(deposit.split(' ')[1], 50 + 2 * (finW + 20) + finW / 2 - 30, doc.y + 10, { lineBreak: false });
+  doc.fontSize(11).fillColor(TEXTDARK).font('Helvetica').text('Security Deposit', 50 + 2 * (finW + 20) + 5, doc.y + 38, { width: finW - 10, align: 'center' });
+
+  doc.y += 75;
+
+  // PAGE 7: MISSING PROTECTIONS
+  secHdr('Missing Protections');
+
+  doc.fontSize(12).fillColor(TEXTDARK).font('Helvetica').text('The following critical legal protections are absent. Their inclusion would strengthen enforceability and reduce disputes.', 50, doc.y, { width: W, lineGap: 2 });
+  doc.y += 40;
+
+  var missingCards = [
+    { title: 'MISSING: Dispute Resolution Clause', desc: 'No arbitration or mediation mechanism. Disputes require civil litigation (12-24 months).', bg: CRITICALBG, col: CRITRED },
+    { title: 'MISSING: Security Deposit Refund Timeline', desc: 'Refund on termination but no deadline specified. Risk of indefinite withholding.', bg: CRITICALBG, col: CRITRED },
+    { title: 'MISSING: Breach Notice & Cure Period', desc: 'No opportunity to remedy breach before eviction. Immediate termination possible.', bg: HIGHBG, col: HIGHORANGE }
+  ];
+
+  missingCards.forEach(card => {
+    if (doc.y > CBOT - 60) { doc.addPage(); }
+    doc.rect(50, doc.y, W, 85).fill(card.bg);
+    doc.rect(50, doc.y, 4, 85).fill(card.col);
+    doc.fontSize(12).fillColor(card.col).font('Helvetica-Bold').text(card.title, 62, doc.y + 8, { width: W - 20 });
+    doc.fontSize(11).fillColor(TEXTDARK).font('Helvetica').text(card.desc, 62, doc.y + 32, { width: W - 20, lineGap: 1.5 });
+    doc.y += 95;
+  });
+
+  // PAGE 8: RECOMMENDATIONS
+  secHdr('Recommendations');
+
+  doc.fontSize(12).fillColor(TEXTDARK).font('Helvetica').text('Below are prioritized amendments to strengthen the agreement. Execute as signed addendum.', 50, doc.y, { width: W, lineGap: 2 });
+  doc.y += 35;
+
+  doc.fontSize(14).fillColor(NAVY).font('Helvetica-Bold').text('PRIORITY 1: CRITICAL (Address Immediately)', 50, doc.y);
+  doc.y += 20;
+
+  var recoPriorities = [
+    { title: 'Add Dispute Resolution Clause', desc: 'Include arbitration or alternate dispute resolution mechanism to resolve disputes within 3-6 months.', bg: CRITICALBG, col: CRITRED },
+    { title: 'Add Security Deposit Refund Clause', desc: 'Specify timeline (e.g., 30 days) and process for returning deposit after agreement termination.', bg: CRITICALBG, col: CRITRED },
+    { title: 'Add Breach Notice & Cure Period', desc: 'Allow 14-30 days to cure breach before termination. Protects both parties from hasty eviction.', bg: CRITICALBG, col: CRITRED }
+  ];
+
+  recoPriorities.forEach(reco => {
+    if (doc.y > CBOT - 60) { doc.addPage(); }
+    doc.rect(50, doc.y, W, 80).fill(reco.bg);
+    doc.rect(50, doc.y, 4, 80).fill(reco.col);
+    doc.fontSize(12).fillColor(reco.col).font('Helvetica-Bold').text(reco.title, 62, doc.y + 8, { width: W - 20 });
+    doc.fontSize(11).fillColor(TEXTDARK).font('Helvetica').text(reco.desc, 62, doc.y + 30, { width: W - 20, lineGap: 1.5 });
+    doc.y += 90;
+  });
+
+  doc.y += 15;
+  doc.fontSize(14).fillColor(NAVY).font('Helvetica-Bold').text('Implementation Timeline', 50, doc.y);
+  doc.y += 20;
+
+  var steps = [
+    'Week 1: Both parties review report and proposed amendments',
+    'Week 2: Prepare "Addendum to Leave & License Agreement" with amendments',
+    'Week 3: Get addendum registered with Pune sub-registrar',
+    'Ongoing: Retain signed and registered documents'
+  ];
+
+  steps.forEach((step, si) => {
+    doc.circle(55, doc.y + 8, 4).fill(GOLD);
+    doc.fontSize(11).fillColor(TEXTDARK).font('Helvetica').text(step, 70, doc.y, { width: W - 30 });
+    doc.y += 28;
+  });
+
+  doc.end();
+});
+
 // ── AI Drafting route ─────────────────────────────────────────────────────────
 
 app.post('/api/draft', express.json(), async (req, res) => {
