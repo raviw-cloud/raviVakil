@@ -462,7 +462,10 @@
 
     // ── Header
     document.getElementById('doc-ref-text').textContent = filename || 'Contract';
-    document.getElementById('download-btn').href = '/api/download/' + sessionId;
+    // Route to correct PDF endpoint based on agreement type
+    const isLeaveAndLicense = meta.contractType && meta.contractType.toLowerCase().includes('leave') && meta.contractType.toLowerCase().includes('license');
+    const downloadEndpoint = isLeaveAndLicense ? '/api/download-leave-license/' : '/api/download/';
+    document.getElementById('download-btn').href = downloadEndpoint + sessionId;
 
     // ── Overview: donut + grade + score
     updateDonut(rc.h, rc.m, rc.l);
