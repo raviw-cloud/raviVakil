@@ -6,8 +6,7 @@
     "dev": "tsx watch src/server.ts",
     "build": "tsc && copyfiles -u 1 \"src/views/**/*\" dist",
     "start": "node dist/server.js",
-    "start:legacy": "node server.js",
-    "test": "node test/score.test.js",
+    "test": "tsx test/score.test.ts",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

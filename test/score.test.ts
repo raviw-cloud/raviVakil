@@ -1,24 +1,22 @@
-'use strict';
-
-const assert = require('node:assert/strict');
-const { calculateScore, scoreToGrade, scoreToRec } = require('../lib/score');
+import assert from 'node:assert/strict';
+import { calculateScore, scoreToGrade, scoreToRec } from '../src/services/scorer';
 
 let passed = 0;
 let failed = 0;
 
-function test(name, fn) {
+function test(name: string, fn: () => void): void {
   try {
     fn();
     console.log('  ok  ' + name);
     passed++;
   } catch (err) {
     console.log('  FAIL ' + name);
-    console.log('       ' + (err && err.message ? err.message : err));
+    console.log('       ' + (err && (err as Error).message ? (err as Error).message : err));
     failed++;
   }
 }
 
-console.log('lib/score');
+console.log('src/services/scorer');
 
 test('Fixture A — single low-composite risk → ~95, A+, SIGN', () => {
   const results = {
@@ -27,7 +25,6 @@ test('Fixture A — single low-composite risk → ~95, A+, SIGN', () => {
     clauses: { missingProtections: [] }
   };
   const s = calculateScore(results);
-  // 100 - round(3 * 1.5) = 100 - 5 = 95
   assert.equal(s, 95, 'expected score 95, got ' + s);
   assert.equal(scoreToGrade(s), 'A+');
   assert.equal(scoreToRec(s), 'SIGN');
@@ -40,7 +37,6 @@ test('Fixture B — composite=9, poisonPill, >₹1Cr → ~80, A, SIGN/NEGOTIATE 
     clauses: { missingProtections: [] }
   };
   const s = calculateScore(results);
-  // 100 - (round(9*1.5) + 5) = 100 - (14 + 5) = 81
   assert.equal(s, 81, 'expected score 81, got ' + s);
   assert.equal(scoreToGrade(s), 'A');
   assert.equal(scoreToRec(s), 'SIGN');
@@ -55,19 +51,17 @@ test('Fixture C — 3 high risks + 2 HIGH compliance + 1 CRITICAL missing → <6
         { id: 'R3', composite: 9, severity: 'HIGH', poisonPill: true }
       ]
     },
-    compliance: { issues: [
-      { id: 'C1', severity: 'HIGH' },
-      { id: 'C2', severity: 'HIGH' }
-    ] },
-    clauses: { missingProtections: [
-      { name: 'Force Majeure', criticality: 'CRITICAL' }
-    ] }
+    compliance: {
+      issues: [
+        { id: 'C1', severity: 'HIGH' },
+        { id: 'C2', severity: 'HIGH' }
+      ]
+    },
+    clauses: {
+      missingProtections: [{ name: 'Force Majeure', criticality: 'CRITICAL' }]
+    }
   };
   const s = calculateScore(results);
-  // risks: round(8*1.5) + round(7*1.5) + (round(9*1.5)+5) = 12 + 11 + 19 = 42
-  // compliance: 6+6 = 12 (under cap 25)
-  // missing: 4 (under cap 15)
-  // 100 - 42 - 12 - 4 = 42
   assert.equal(s, 42, 'expected score 42, got ' + s);
   assert.ok(s < 60, 'expected <60');
   assert.equal(scoreToGrade(s), 'D');
@@ -76,11 +70,7 @@ test('Fixture C — 3 high risks + 2 HIGH compliance + 1 CRITICAL missing → <6
 
 test('Fallback — risk without composite uses severity tier', () => {
   const results = {
-    risks: { risks: [
-      { severity: 'HIGH' },     // -12
-      { severity: 'MEDIUM' },   //  -6
-      { severity: 'LOW' }       //  -2
-    ] },
+    risks: { risks: [{ severity: 'HIGH' }, { severity: 'MEDIUM' }, { severity: 'LOW' }] },
     compliance: { issues: [] },
     clauses: { missingProtections: [] }
   };
@@ -89,7 +79,7 @@ test('Fallback — risk without composite uses severity tier', () => {
 });
 
 test('Cap — compliance deduction capped at 25', () => {
-  const issues = [];
+  const issues: Array<{ severity: string }> = [];
   for (let i = 0; i < 20; i++) issues.push({ severity: 'HIGH' });
   const results = {
     risks: { risks: [] },
@@ -101,7 +91,7 @@ test('Cap — compliance deduction capped at 25', () => {
 });
 
 test('Cap — missing-protection deduction capped at 15', () => {
-  const missing = [];
+  const missing: Array<{ name: string; criticality: string }> = [];
   for (let i = 0; i < 10; i++) missing.push({ name: 'X', criticality: 'CRITICAL' });
   const results = {
     risks: { risks: [] },
@@ -113,7 +103,7 @@ test('Cap — missing-protection deduction capped at 15', () => {
 });
 
 test('Clamp — score floor 0', () => {
-  const risks = [];
+  const risks: Array<{ composite: number; poisonPill: boolean }> = [];
   for (let i = 0; i < 20; i++) risks.push({ composite: 10, poisonPill: true });
   const s = calculateScore({ risks: { risks }, compliance: { issues: [] }, clauses: { missingProtections: [] } });
   assert.equal(s, 0);
