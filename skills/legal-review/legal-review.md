@@ -95,16 +95,74 @@ Once all 5 agents return, compile the unified report.
 
 ### 3.1 Calculate Contract Safety Score
 
-Use weighted scoring from all agents:
+The Safety Score is computed from the structured JSON returned by the Risk, Compliance, and Clauses agents. It is **not** a weighted average of self-reported subagent scores — it is a deterministic deduction model so the score is reproducible and explainable.
+
+```
+START: score = 100
+
+For each risk r in legal-risks.risks:
+  // r.composite is the (Severity*0.40 + Likelihood*0.25 + Financial*0.20 + Asymmetry*0.15)
+  // value the Risk agent computes per its rubric.
+  penalty = round(r.composite * 1.5)        // 1-10 → 1.5-15 pts per risk
+  if r.poisonPill === true: penalty += 5
+  score -= penalty
+
+For each issue c in legal-compliance.issues:
+  if c.severity === "HIGH"   : score -= 6
+  if c.severity === "MEDIUM" : score -= 3
+  if c.severity === "LOW"    : score -= 1
+  cap total compliance deduction at 25
+
+For each m in legal-clauses.missingProtections:
+  if m.criticality === "CRITICAL" : score -= 4
+  else                            : score -= 2
+  cap total missing-protection deduction at 15
+
+score = clamp(score, 0, 100)
+```
+
+**Grade table:**
 
 | Score Range | Grade | Label | Meaning |
 |-------------|-------|-------|---------|
-| 90-100 | A+ | Safe | Low risk, standard favorable terms |
-| 80-89 | A | Good | Minor issues, generally favorable |
+| 90-100 | A+ | Safe | Low risk, standard favourable terms |
+| 80-89 | A | Good | Minor issues, generally favourable |
 | 70-79 | B | Fair | Some concerning clauses need attention |
 | 60-69 | C | Caution | Multiple risky clauses, negotiate before signing |
 | 40-59 | D | Risky | Significant risks, strong negotiation needed |
 | 0-39 | F | Dangerous | Do not sign without major revisions |
+
+**Signing recommendation (must match the value the Risk and Recommendations agents emit):**
+
+| Score | Recommendation |
+|-------|----------------|
+| ≥ 80 | SIGN |
+| ≥ 60 | NEGOTIATE |
+| ≥ 40 | ESCALATE |
+| < 40 | REJECT |
+
+The web backend (`server.js → calculateScore()`) implements this same algorithm so the slash-command output and the web app produce identical scores for the same contract.
+
+### 3.1a Canonical Aggregated JSON
+
+After all 5 subagents return, the orchestrator produces this aggregate object — the same shape the web backend's `/api/results/:sessionId` returns. The Markdown report in §3.2 is rendered from this object.
+
+```json
+{
+  "score": 72,
+  "grade": "B",
+  "label": "Fair",
+  "recommendation": "NEGOTIATE",
+  "summary": "1-3 sentence executive summary",
+  "results": {
+    "clauses":         { /* per agents/legal-clauses.md JSON contract */ },
+    "risks":           { /* per agents/legal-risks.md JSON contract */ },
+    "compliance":      { /* per agents/legal-compliance.md JSON contract */ },
+    "terms":           { /* per agents/legal-terms.md JSON contract */ },
+    "recommendations": { /* per agents/legal-recommendations.md JSON contract */ }
+  }
+}
+```
 
 ### 3.2 Build the Report
 

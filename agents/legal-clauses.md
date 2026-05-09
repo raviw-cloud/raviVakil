@@ -102,7 +102,73 @@ Adjust importance based on what kind of contract is being reviewed:
 - **Partnership/JV**: Prioritize profit sharing, decision-making, exit provisions, IP ownership
 - **M&A Agreement**: Prioritize reps and warranties, indemnification, closing conditions, earnouts
 
-## Output Format
+## Output JSON Contract (Authoritative)
+
+Return ONLY a JSON object in this exact shape — no markdown outside the JSON. The tables below are reference-only.
+
+```json
+{
+  "metadata": {
+    "title": "Service Agreement between Acme and Vendor",
+    "type": "Service Agreement",
+    "parties": [
+      { "name": "Acme Pvt Ltd", "definedAs": "Company", "role": "client" },
+      { "name": "Vendor LLP", "definedAs": "Contractor", "role": "service-provider" }
+    ],
+    "effectiveDate": "2026-04-01 or 'not specified'",
+    "term": "12 months",
+    "governingLaw": "India",
+    "totalSectionsAnalyzed": 18,
+    "totalClausesIdentified": 42
+  },
+  "clauses": [
+    {
+      "id": "CL1",
+      "section": "2.1",
+      "heading": "Payment Terms",
+      "category": ["Payment"],
+      "secondaryFlags": ["Auto-Renewal"],
+      "summary": "Plain-English summary a non-lawyer can read in one go",
+      "verbatim": "Exact text of the clause, truncated with … beyond 100 words",
+      "completeness": 4
+    }
+  ],
+  "missingProtections": [
+    {
+      "name": "Force Majeure",
+      "criticality": "CRITICAL",
+      "reason": "Neither party has protection for non-performance due to extraordinary events",
+      "suggestedRemedy": "Add a mutual force majeure clause covering acts of God, strikes, pandemics, governmental action"
+    }
+  ],
+  "definedTerms": [
+    {
+      "term": "Confidential Information",
+      "definitionLocation": "Section 1.3",
+      "timesUsed": 14,
+      "issue": "Defined but used inconsistently across Sections 4 and 9"
+    }
+  ],
+  "crossReferences": [
+    {
+      "from": "Section 3.2",
+      "to": "Section 12.1",
+      "relationship": "modified-by",
+      "note": "Late fee schedule modifies payment terms"
+    }
+  ]
+}
+```
+
+**Field rules**:
+
+- `category` — array; values must be drawn from §Primary Clause Categories (Payment, Termination, Liability, Intellectual Property, Confidentiality, Indemnification, Non-Compete, Warranty, Governing Law, Force Majeure, Assignment, Amendment, Notices, Dispute Resolution, Insurance, Data Protection, Audit Rights, Subcontracting, Severability, Entire Agreement, Survival).
+- `secondaryFlags` — drawn from §Secondary Flags (Auto-Renewal, MFN, Change of Control, Exclusivity, Non-Solicitation, Liquidated Damages, Right of First Refusal, Escalation).
+- `completeness` — integer 0–5 per §Scoring Criteria.
+- `missingProtections.criticality` — `CRITICAL` (force majeure, limitation of liability, dispute resolution, data protection if personal data involved) or `IMPORTANT` (everything else).
+- `id` — `CL1`, `CL2`, ... unique within the document; downstream agents use this to reference clauses.
+
+## Legacy Output Format (Reference Only)
 
 ### Contract Metadata
 ```

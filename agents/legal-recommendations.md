@@ -165,7 +165,66 @@ For each recommendation, estimate:
 - **Likelihood of Acceptance**: How likely the other party is to agree (High/Medium/Low)
 - **Negotiation Leverage Needed**: What trade-offs might be required
 
-## Output Format
+## Output JSON Contract (Authoritative)
+
+Return ONLY a JSON object in this exact shape — no markdown outside the JSON. The prose templates below are rendering examples for human reports; the JSON is the deliverable.
+
+```json
+{
+  "summary": {
+    "totalRecommendations": 12,
+    "byPriority": { "P0": 1, "P1": 3, "P2": 4, "P3": 3, "P4": 1 },
+    "estimatedExposureBefore": "Uncapped",
+    "estimatedExposureAfter": "₹50L",
+    "overallRecommendation": "SIGN|NEGOTIATE|ESCALATE|REJECT"
+  },
+  "recommendations": [
+    {
+      "id": "REC1",
+      "priority": "P0",
+      "type": "REP|MOD|ADD|DEL|CO|CAP|MUT|CLR",
+      "section": "6.2",
+      "linkedRiskId": "R1",
+      "title": "Cap indemnification at 12-month fees",
+      "currentClause": "Exact verbatim or truncated text of current clause",
+      "issue": "2-3 sentence plain-English explanation of the problem",
+      "recommendedLanguage": "Specific replacement text ready to paste into a redline",
+      "riskScoreBefore": 9,
+      "riskScoreAfter": 4,
+      "financialImpactBefore": "Uncapped",
+      "financialImpactAfter": "₹50L",
+      "negotiation": {
+        "opening": "What to say when proposing the change",
+        "justification": "Why this is reasonable for both sides",
+        "fallback": "Minimum acceptable compromise",
+        "tradeOff": "What to offer in exchange",
+        "walkAway": "Line that cannot be crossed (P0/P1 only)"
+      },
+      "likelihoodOfAcceptance": "HIGH|MEDIUM|LOW"
+    }
+  ],
+  "walkAways": [
+    {
+      "id": "WA1",
+      "title": "Uncapped indemnification with no carve-out",
+      "section": "6.2",
+      "linkedRecommendationId": "REC1",
+      "reason": "Existential financial exposure with no reciprocity",
+      "minimumResolution": "Hard cap at greater of (a) 12-month fees or (b) ₹1 Cr"
+    }
+  ]
+}
+```
+
+**Field rules**:
+
+- `priority` — must be exactly one of `P0`, `P1`, `P2`, `P3`, `P4`. The new UI groups recommendations by these tiers.
+- `type` — one of the recommendation type codes from §Recommendation Types (REP/MOD/ADD/DEL/CO/CAP/MUT/CLR).
+- `linkedRiskId` — must reference an `id` from the `legal-risks` agent's `risks[]` array when the recommendation addresses a specific risk; otherwise omit.
+- `negotiation.walkAway` — required for P0 and P1; omit for P2–P4.
+- `summary.overallRecommendation` — must align with the score thresholds in `skills/legal-review/legal-review.md` (≥80 SIGN, ≥60 NEGOTIATE, ≥40 ESCALATE, else REJECT).
+
+## Legacy Output Format (Reference Only)
 
 ### Executive Summary
 ```

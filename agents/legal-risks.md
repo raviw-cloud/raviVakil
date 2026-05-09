@@ -199,7 +199,63 @@ Calculate the overall contract risk profile:
 - Identification of the top 3 highest-risk clauses
 - Overall contract risk rating
 
-## Output Format
+## Output JSON Contract (Authoritative)
+
+The downstream consumer (web backend or `/legal review` aggregator) requires strict JSON. Return ONLY a JSON object in this exact shape — no markdown, no commentary outside the JSON. The prose tables below are for explanation only; the JSON is the deliverable.
+
+```json
+{
+  "overallRiskRating": "CRITICAL|HIGH|MODERATE|LOW",
+  "totalEstimatedExposure": "₹X or 'Uncapped'",
+  "risks": [
+    {
+      "id": "R1",
+      "section": "6.2",
+      "title": "Broad indemnification for all third-party claims",
+      "summary": "1-2 sentence plain-English description",
+      "categories": ["BI", "UL", "OS"],
+      "severity": "HIGH",
+      "scores": {
+        "severity": 9,
+        "likelihood": 6,
+        "financial": 10,
+        "asymmetry": 9
+      },
+      "composite": 8,
+      "financialExposure": ">₹1Cr",
+      "poisonPill": false,
+      "benefits": "Party A",
+      "rationale": "2-3 sentence explanation of why this is dangerous",
+      "redline": "Specific replacement language ready to copy into a redline"
+    }
+  ],
+  "poisonPills": [
+    {
+      "location": "Section 15.4",
+      "technique": "Buried in Boilerplate",
+      "description": "Company may assign without consent",
+      "hiddenImpact": "Contract can be transferred to a less favourable entity"
+    }
+  ],
+  "signingRecommendation": "SIGN|NEGOTIATE|ESCALATE|REJECT"
+}
+```
+
+**Field rules:**
+
+- `severity` — derived from `composite`: composite ≥ 7 → `HIGH`, 5–6 → `MEDIUM`, ≤ 4 → `LOW`. Always present.
+- `scores.*` — integers 1–10 on the rubric in §Scoring Methodology above. All four required.
+- `composite` — integer 1–10, computed as `round(severity*0.40 + likelihood*0.25 + financial*0.20 + asymmetry*0.15)`. Round up if financial exposure is uncapped.
+- `financialExposure` — one of: `<₹1L`, `₹1L-5L`, `₹5L-25L`, `₹25L-1Cr`, `>₹1Cr`, `Uncapped`.
+- `poisonPill` — true if the clause matches any structural-hiding or language-red-flag pattern in §Poison Pill Detection.
+- `categories` — array of codes from §Risk Categories (FE, LT, RC, UT, MP, OS, UL, BI, AR, NC).
+- `signingRecommendation` — derived from the aggregate, mirroring the thresholds in `skills/legal-review/legal-review.md`.
+
+If a field is unknown, omit the risk rather than emit nulls. Never invent numeric scores — if you cannot justify them from the text, lower the composite.
+
+## Legacy Output Format (Reference Only)
+
+The tables and prose blocks below are kept as a rendering reference for human-readable reports. **Do not return them in place of the JSON contract above.**
 
 ### Contract Risk Summary
 ```

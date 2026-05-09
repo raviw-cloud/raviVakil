@@ -136,7 +136,82 @@ TOTAL MAXIMUM EXPOSURE: A + B + C + D = ₹___
 TOTAL GUARANTEED EXPOSURE: A = ₹___
 ```
 
-## Output Format
+## Output JSON Contract (Authoritative)
+
+Return ONLY a JSON object in this exact shape — no markdown outside the JSON. The tables below are reference-only.
+
+```json
+{
+  "termOverview": {
+    "type": "Service Agreement",
+    "effectiveDate": "2026-04-01",
+    "initialTerm": "12 months",
+    "autoRenewal": true,
+    "renewalTerm": "12 months",
+    "optOutNoticeDays": 90,
+    "totalPotentialDuration": "indefinite (auto-renews)",
+    "terminationForConvenience": { "available": true, "byParty": "either", "noticeDays": 60 },
+    "governingLaw": "India"
+  },
+  "obligations": [
+    {
+      "id": "OB1",
+      "section": "2.1",
+      "obligatedParty": "Contractor",
+      "type": "PERF|PAY|NOTC|APPR|RPT|INS|COMP|REST|COND|SURV",
+      "description": "Deliver Phase 1 software build",
+      "trigger": { "kind": "Calendar|Event|Condition|Milestone|Rolling|Continuous|Negative", "detail": "60 calendar days from Effective Date" },
+      "deadline": "2026-05-31",
+      "curePeriodDays": 15,
+      "consequenceOfBreach": "Termination right + liquidated damages of ₹50,000/day",
+      "consequenceSeverity": "HIGH|MEDIUM|LOW"
+    }
+  ],
+  "timeline": [
+    {
+      "id": "TL1",
+      "date": "2026-04-01",
+      "label": "Effective Date — Contract begins",
+      "kind": "MILESTONE|DEADLINE|RECURRING|RENEWAL_WINDOW|POST_TERMINATION",
+      "obligationIds": ["OB1"],
+      "critical": true
+    }
+  ],
+  "autoRenewalTraps": [
+    {
+      "id": "AR1",
+      "section": "5.2",
+      "description": "Notice must be sent by certified mail to a specific address; email is not accepted",
+      "windowOpens": "2027-01-01",
+      "windowCloses": "2027-01-31",
+      "impact": "If window is missed, contract auto-renews for 12 months at then-current rates"
+    }
+  ],
+  "financialExposure": {
+    "guaranteed": { "baseValue": "₹60,00,000", "minimumCommitments": "0", "insurance": "₹50,000/yr", "subtotal": "₹60,50,000" },
+    "contingent": { "earlyTerminationFee": "₹5,00,000", "maxLiquidatedDamages": "₹10,00,000", "latePaymentInterestEstimate": "₹1,00,000", "subtotal": "₹16,00,000" },
+    "uncapped": { "indemnificationCap": "Uncapped", "consequentialDamagesExcluded": false, "notes": "Indemnification is uncapped per S.6.2" },
+    "totalMaxExposure": "₹76,50,000 + uncapped indemnification"
+  },
+  "obligationBalance": {
+    "partyA": { "performance": 2, "payment": 0, "notice": 1, "compliance": 3, "restrictive": 1, "termination": 2 },
+    "partyB": { "performance": 5, "payment": 1, "notice": 2, "compliance": 3, "restrictive": 3, "termination": 1 },
+    "assessment": "Heavily favors Party A"
+  }
+}
+```
+
+**Field rules**:
+
+- `obligations[]` and `timeline[]` are **separate top-level arrays** (the new UI renders an Obligations table and a Timeline track as distinct sections).
+- `type` — one of the codes from §Obligation Types (PERF, PAY, NOTC, APPR, RPT, INS, COMP, REST, COND, SURV).
+- `trigger.kind` — one of the values from §Trigger Types.
+- `consequenceSeverity` — `HIGH` for termination-right / acceleration / forfeiture; `MEDIUM` for cure-period-then-termination / liquidated damages with cap; `LOW` for service credits / interest only.
+- `timeline[].kind` — `MILESTONE` for one-off events, `DEADLINE` for due dates, `RECURRING` for monthly/annual obligations, `RENEWAL_WINDOW` for auto-renewal opt-out windows, `POST_TERMINATION` for surviving obligations.
+- `timeline[].obligationIds` — array of `obligations[].id` references.
+- `id` — `OB1`/`TL1`/`AR1`; the recommendations and risks agents may reference these.
+
+## Legacy Output Format (Reference Only)
 
 ### Contract Term Overview
 ```

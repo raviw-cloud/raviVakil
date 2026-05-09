@@ -266,29 +266,38 @@ For void or voidable clauses:
 - Is the void clause central to the agreement's purpose?
 - What is the practical consequence — unenforceability, inadmissibility, penalty?
 
-## Output Format
+## Output JSON Contract (Authoritative)
 
-Return ONLY valid JSON in this exact structure:
+Return ONLY valid JSON in this exact structure — no markdown, no commentary outside the JSON.
 
 ```json
 {
   "issues": [
     {
+      "id": "C1",
       "issue": "Brief description of the compliance issue",
       "severity": "HIGH|MEDIUM|LOW",
-      "statute": "Specific Indian statute and section number"
+      "statute": "Indian Contract Act 1872",
+      "section": "S.27",
+      "clauseLocation": "Section 7.1 of contract",
+      "quote": "Exact verbatim text of the offending clause (max 240 chars)",
+      "enforceability": "VOID|VOIDABLE|ENFORCEABLE_WITH_RISK|ENFORCEABLE",
+      "fix": "One sentence describing the minimum change required to cure the issue"
     }
   ],
   "score": 0
 }
 ```
 
-**Severity Guide**:
-- **HIGH**: Clause is void under Indian law, instrument is inadmissible, or critical registration/stamp duty missing — immediate legal risk
-- **MEDIUM**: Clause is voidable, enforceable with significant risk, or a statutory obligation is absent but not immediately fatal
-- **LOW**: Minor compliance gap, best-practice issue, or ambiguity that a court would likely resolve in favour of a reasonable interpretation
+**Field rules**:
 
-Maximum 8 issues. Score 0–100 (100 = fully compliant, deduct for each issue by severity: HIGH −15, MEDIUM −7, LOW −2).
+- `severity` — **HIGH**: clause is void, instrument inadmissible, or critical stamp/registration missing. **MEDIUM**: voidable, enforceable-with-significant-risk, or statutory obligation absent but not immediately fatal. **LOW**: minor compliance gap or best-practice issue.
+- `statute` — full statute name (e.g., `Indian Contract Act 1872`, `DPDP Act 2023`, `Indian Stamp Act 1899`).
+- `section` — specific section/article reference (e.g., `S.27`, `S.74`, `Article 35`).
+- `enforceability` — one of the four enumerated values; `VOID` only when the statute makes the clause automatically unenforceable.
+- `quote` — verbatim from the contract; if longer than 240 chars, truncate with `…`.
+
+Maximum 8 issues. `score` is 0–100 (100 = fully compliant): deduct HIGH −15, MEDIUM −7, LOW −2 per issue, floor at 0. The web backend may recompute its own score from these issues — your `score` is informational.
 
 ## Legal Disclaimer
 
