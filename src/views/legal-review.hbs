@@ -1,0 +1,218 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>India Legal Document Review</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: Arial, Helvetica, sans-serif; color: #172033; background: #f4f6f8; }
+    .page { max-width: 960px; margin: 0 auto; background: #fff; min-height: 100vh; }
+    .hero { background: #162235; color: #fff; padding: 34px 42px; }
+    .eyebrow { color: #a7c7ff; font-size: 12px; letter-spacing: .08em; text-transform: uppercase; }
+    h1 { margin: 8px 0 8px; font-size: 30px; line-height: 1.2; }
+    .subtitle { margin: 0; color: #d6deea; font-size: 14px; }
+    .score-row { display: flex; gap: 16px; margin-top: 24px; flex-wrap: wrap; }
+    .score-box { border: 1px solid rgba(255,255,255,.25); border-radius: 8px; padding: 14px 18px; min-width: 140px; }
+    .score-value { font-size: 28px; font-weight: 700; }
+    .score-label { color: #d6deea; font-size: 12px; text-transform: uppercase; }
+    .section { padding: 24px 42px; border-bottom: 1px solid #e5e9ef; }
+    h2 { margin: 0 0 14px; font-size: 18px; color: #162235; }
+    p { line-height: 1.55; }
+    .profile-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+    .profile-item { border: 1px solid #e1e6ee; border-radius: 8px; padding: 10px 12px; }
+    .profile-label { font-size: 11px; color: #66758a; text-transform: uppercase; margin-bottom: 4px; }
+    .profile-value { font-size: 14px; color: #172033; }
+    .dashboard { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+    .metric { border-radius: 8px; padding: 14px; border: 1px solid #e1e6ee; }
+    .metric strong { display: block; font-size: 26px; }
+    .metric.high { border-left: 5px solid #c0392b; }
+    .metric.medium { border-left: 5px solid #d68910; }
+    .metric.low { border-left: 5px solid #2e7d32; }
+    table { width: 100%; border-collapse: collapse; font-size: 12px; }
+    th, td { border: 1px solid #dfe5ed; padding: 8px; vertical-align: top; text-align: left; }
+    th { background: #f1f4f8; color: #334155; }
+    .cards { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+    .card { border: 1px solid #e1e6ee; border-radius: 8px; padding: 12px; break-inside: avoid; }
+    .card.high, .card.critical { border-left: 5px solid #c0392b; }
+    .card.medium { border-left: 5px solid #d68910; }
+    .card.low { border-left: 5px solid #2e7d32; }
+    .card-title { font-weight: 700; margin-bottom: 8px; color: #172033; }
+    .card-text { margin: 0; font-size: 12px; }
+    .severity-high { color: #a93226; font-weight: 700; }
+    .severity-medium { color: #a15c00; font-weight: 700; }
+    .severity-low { color: #1f7a3f; font-weight: 700; }
+    .timeline-item { display: flex; gap: 10px; margin: 10px 0; }
+    .timeline-dot { width: 10px; height: 10px; border-radius: 50%; background: #3662ff; margin-top: 5px; flex: 0 0 auto; }
+    .timeline-date { font-weight: 700; color: #172033; }
+    .timeline-text { font-size: 13px; color: #334155; }
+    .empty { color: #66758a; font-style: italic; }
+    .disclaimer { background: #fff7ed; color: #7c2d12; font-size: 12px; }
+    @media print {
+      body { background: #fff; }
+      .page { max-width: none; }
+      .section { page-break-inside: avoid; }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <section class="hero">
+      <div class="eyebrow">India-law focused AI review</div>
+      <h1>{{documentTitle}}</h1>
+      <p class="subtitle">{{documentType}} | Generated {{currentDate}}</p>
+      <div class="score-row">
+        <div class="score-box {{riskBadge}}"><div class="score-label">Safety Score</div><div class="score-value">{{score}}/100</div></div>
+        <div class="score-box"><div class="score-label">Grade</div><div class="score-value">{{grade}}</div></div>
+        <div class="score-box"><div class="score-label">Recommendation</div><div class="score-value">{{recommendation}}</div></div>
+        <div class="score-box"><div class="score-label">Risk Label</div><div class="score-value">{{riskLabel}}</div></div>
+      </div>
+    </section>
+    <section class="section disclaimer">This AI-generated review is for general information only and is not legal advice. Consult a qualified advocate licensed in the relevant Indian jurisdiction before signing or acting on this document.</section>
+    <section class="section"><h2>Executive Summary</h2><p>{{summary}}</p></section>
+    <section class="section">
+      <h2>Document Profile</h2>
+      <div class="profile-grid">
+        {{#if profileRows.length}}
+          {{#each profileRows}}
+            <div class="profile-item">
+              <div class="profile-label">{{this.label}}</div>
+              <div class="profile-value">{{this.value}}</div>
+            </div>
+          {{/each}}
+        {{else}}
+          <p class="empty">No document metadata was identified.</p>
+        {{/if}}
+      </div>
+    </section>
+    <section class="section">
+      <h2>Risk Dashboard</h2>
+      <div class="dashboard">
+        <div class="metric high"><strong>{{highRiskCount}}</strong>High / Critical</div>
+        <div class="metric medium"><strong>{{mediumRiskCount}}</strong>Medium</div>
+        <div class="metric low"><strong>{{lowRiskCount}}</strong>Low</div>
+      </div>
+    </section>
+    <section class="section">
+      <h2>Clause Review</h2>
+      <table>
+        <thead><tr><th>Clause</th><th>Location</th><th>Severity</th><th>Summary</th></tr></thead>
+        <tbody>
+          {{#if clauseRows.length}}
+            {{#each clauseRows}}
+              <tr>
+                <td><strong>{{this.name}}</strong></td>
+                <td>{{this.location}}</td>
+                <td><span class="severity-{{this.severityClass}}">{{this.severity}}</span></td>
+                <td>{{this.summary}}</td>
+              </tr>
+            {{/each}}
+          {{else}}
+            <tr><td colspan="4">No clause inventory was returned.</td></tr>
+          {{/if}}
+        </tbody>
+      </table>
+    </section>
+    <section class="section">
+      <h2>Key Risks</h2>
+      <div class="cards">
+        {{#if riskCards.length}}
+          {{#each riskCards}}
+            <div class="card {{this.cls}}">
+              <div class="card-title">{{this.severity}} RISK: {{this.title}}</div>
+              <p class="card-text">
+                <strong>Issue:</strong> {{this.issue}}<br><br>
+                <strong>Impact:</strong> {{this.impact}}<br><br>
+                <strong>Location:</strong> {{this.location}}
+              </p>
+            </div>
+          {{/each}}
+        {{else}}
+          <p class="empty">No specific risks were returned by the review.</p>
+        {{/if}}
+      </div>
+    </section>
+    <section class="section">
+      <h2>Obligations and Deadlines</h2>
+      {{#if timelineItems.length}}
+        {{#each timelineItems}}
+          <div class="timeline-item">
+            <div class="timeline-dot"></div>
+            <div class="timeline-content">
+              <div class="timeline-date">{{this.date}}</div>
+              <div class="timeline-text"><strong>{{this.party}}:</strong> {{this.obligation}} {{this.consequence}}</div>
+            </div>
+          </div>
+        {{/each}}
+      {{else}}
+        <p class="empty">No dated obligations were identified.</p>
+      {{/if}}
+      <table>
+        <thead><tr><th>Party</th><th>Obligation</th><th>Deadline</th><th>Consequence</th></tr></thead>
+        <tbody>
+          {{#if obligationsRows.length}}
+            {{#each obligationsRows}}
+              <tr>
+                <td><strong>{{this.party}}</strong></td>
+                <td>{{this.obligation}}</td>
+                <td>{{this.deadline}}</td>
+                <td>{{this.consequence}}</td>
+              </tr>
+            {{/each}}
+          {{else}}
+            <tr><td colspan="4">No obligations were returned.</td></tr>
+          {{/if}}
+        </tbody>
+      </table>
+    </section>
+    <section class="section">
+      <h2>Compliance Flags</h2>
+      <table>
+        <thead><tr><th>Severity</th><th>Issue</th><th>Law / Framework</th></tr></thead>
+        <tbody>
+          {{#if complianceRows.length}}
+            {{#each complianceRows}}
+              <tr>
+                <td><span class="severity-{{this.severityClass}}">{{this.severity}}</span></td>
+                <td>{{this.issue}}</td>
+                <td>{{this.statute}}</td>
+              </tr>
+            {{/each}}
+          {{else}}
+            <tr><td colspan="3">No compliance flags were returned.</td></tr>
+          {{/if}}
+        </tbody>
+      </table>
+    </section>
+    <section class="section">
+      <h2>Missing Protections</h2>
+      <div class="cards">
+        {{#if missingCards.length}}
+          {{#each missingCards}}
+            <div class="card critical">
+              <div class="card-title">MISSING PROTECTION</div>
+              <p class="card-text">{{this.text}}</p>
+            </div>
+          {{/each}}
+        {{else}}
+          <p class="empty">No missing protections were identified.</p>
+        {{/if}}
+      </div>
+    </section>
+    <section class="section">
+      <h2>Recommended Actions</h2>
+      <div class="cards">
+        {{#if recoCards.length}}
+          {{#each recoCards}}
+            <div class="card {{this.cls}}">
+              <div class="card-title">{{this.priority}}: {{this.action}}</div>
+              <p class="card-text">{{this.recommendation}}</p>
+            </div>
+          {{/each}}
+        {{else}}
+          <p class="empty">No recommendations were returned by the review.</p>
+        {{/if}}
+      </div>
+    </section>
+  </main>
+</body>
+</html>

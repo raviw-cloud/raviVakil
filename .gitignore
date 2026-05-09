@@ -1,5 +1,13 @@
 node_modules/
 .env
+.env.*
 *.pdf
 test-response.json
 worktrees/
+dist/
+.claude/
+.superpowers/
+*.log
+.DS_Store
+.vscode/
+.idea/
